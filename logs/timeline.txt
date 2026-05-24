@@ -1,0 +1,9 @@
+[10:15:24.704] === A: cold launch calculator (from home) ===
+[10:15:27.981] === B: press HOME ===
+[10:15:29.070] === C: cold launch aliexpress ===
+[10:15:33.198] === D: fast switch aliexpress -> calculator (existing task) ===
+[10:15:35.339] === E: fast switch calc -> aliexpress (existing task) ===
+[10:15:37.435] === F: home, then --activity-reorder-to-front calc (recents proxy) ===
+[10:15:40.650] === G: force-stop calc, then am start calc (cold restart) ===
+[10:15:47.069] === H: screen off, wait 3s, screen on, swipe-up (calc foreground) ===
+[10:15:53.477] === I: end ===

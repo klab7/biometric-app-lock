@@ -1,0 +1,5 @@
+[
+  {"icon": "feat", "message": "Gate any app behind a fingerprint or face prompt"},
+  {"icon": "feat", "message": "Add or remove protected apps live from the Apps tab"},
+  {"icon": "fix", "message": "Blackout and screenshot protection on all supported APIs"}
+]
