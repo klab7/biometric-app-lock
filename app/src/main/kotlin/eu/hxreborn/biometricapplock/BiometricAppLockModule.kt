@@ -4,10 +4,12 @@ import android.os.Process
 import android.util.Log
 import eu.hxreborn.biometricapplock.hook.AuthState
 import eu.hxreborn.biometricapplock.hook.registerActivityHooks
+import eu.hxreborn.biometricapplock.hook.registerSystemServerHooks
 import eu.hxreborn.biometricapplock.util.Logger
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 
 @PublishedApi
 internal lateinit var module: BiometricAppLockModule
@@ -22,12 +24,24 @@ class BiometricAppLockModule : XposedModule() {
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
-        if (!param.isFirstPackage()) return
+        if (!param.isFirstPackage) return
         Logger.log(
             Log.INFO,
             "loaded for ${param.packageName} pid=${Process.myPid()}",
         )
         runCatching { registerActivityHooks(param.classLoader, state) }
             .onFailure { Logger.log(Log.ERROR, "registerActivityHooks failed: ${it.message}", it) }
+    }
+
+    override fun onSystemServerStarting(param: SystemServerStartingParam) {
+        Logger.log(Log.INFO, "system_server starting pid=${Process.myPid()}")
+        runCatching { registerSystemServerHooks(param.classLoader) }
+            .onFailure {
+                Logger.log(
+                    Log.ERROR,
+                    "registerSystemServerHooks failed: ${it.message}",
+                    it,
+                )
+            }
     }
 }

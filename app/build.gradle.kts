@@ -176,9 +176,9 @@ abstract class GenerateXposedModuleProp : DefaultTask() {
 
     @TaskAction
     fun run() {
-        val target = outputDir.get().file("META-INF/xposed/module.prop").asFile
-        target.parentFile.mkdirs()
-        target.writeText(
+        val xposedDir = outputDir.get().file("META-INF/xposed").asFile
+        xposedDir.mkdirs()
+        xposedDir.resolve("module.prop").writeText(
             """
             id=${moduleId.get()}
             name=${moduleName.get()}
@@ -188,9 +188,10 @@ abstract class GenerateXposedModuleProp : DefaultTask() {
             description=${moduleDescription.get()}
             minApiVersion=${moduleApiVersion.get()}
             targetApiVersion=${moduleApiVersion.get()}
-            staticScope=false
+            staticScope=true
             """.trimIndent() + "\n",
         )
+        xposedDir.resolve("scope.list").writeText("system\n")
     }
 }
 

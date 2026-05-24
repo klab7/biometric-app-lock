@@ -42,4 +42,4 @@ iss/
 *.md
 !README.md
 __MACOSX/
-
+logs/
