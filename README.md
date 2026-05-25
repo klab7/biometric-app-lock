@@ -5,6 +5,8 @@ Xposed module to put any app behind a biometric lock. WIP
 ![Android 11+](https://img.shields.io/badge/Android-11%2B-1B5E20?style=flat-square)
 ![libxposed API 101](https://img.shields.io/badge/libxposed-API_101-ff69b4?style=flat-square)
 
+> **All current builds are experimental.** Expect rough edges and breaking changes between releases.
+
 ## Requirements
 
 - Android 11+
