@@ -36,7 +36,6 @@ class App : Application() {
                     )
                     boundService = service
                     prefsRepository.syncToRemote()
-                    HotReloadTrigger.tryReload(service)
                     listeners.forEach { it.onServiceBind(service) }
                 }
 

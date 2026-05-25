@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import eu.hxreborn.biometricapplock.App
-import eu.hxreborn.biometricapplock.HotReloadTrigger
 import eu.hxreborn.biometricapplock.prefs.Prefs
 import io.github.libxposed.service.XposedService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 data class FrameworkInfo(
     val name: String,
     val version: String,
-    val supportsHotReload: Boolean,
 )
 
 enum class ModuleStatus { NotEnabled, RebootRequired, Enabled }
@@ -31,10 +29,6 @@ sealed interface ServiceLoadEvent {
     val epochMs: Long
 
     data class Boot(
-        override val epochMs: Long,
-    ) : ServiceLoadEvent
-
-    data class HotReload(
         override val epochMs: Long,
     ) : ServiceLoadEvent
 }
@@ -70,7 +64,7 @@ class ScopeViewModel(
     private fun deriveStatus(framework: FrameworkInfo?): ModuleStatus =
         when {
             framework == null -> ModuleStatus.NotEnabled
-            apkUpdatedAfterBoot && !framework.supportsHotReload -> ModuleStatus.RebootRequired
+            apkUpdatedAfterBoot -> ModuleStatus.RebootRequired
             else -> ModuleStatus.Enabled
         }
 
@@ -80,33 +74,13 @@ class ScopeViewModel(
     }
 
     fun onServiceBound(service: XposedService) {
-        val hotReload =
-            runCatching {
-                service.frameworkProperties and XposedService.PROP_RT_HOT_RELOAD != 0L
-            }.getOrDefault(false)
         _framework.value =
             FrameworkInfo(
                 name = service.frameworkName,
                 version = "v${service.frameworkVersion}",
-                supportsHotReload = hotReload,
             )
-        _serviceLoadEvent.value = deriveServiceLoadEvent(hotReload)
-    }
-
-    private fun deriveServiceLoadEvent(supportsHotReload: Boolean): ServiceLoadEvent {
-        val bootEpochMs = System.currentTimeMillis() - SystemClock.elapsedRealtime()
-        val updateTime =
-            runCatching {
-                getApplication<Application>()
-                    .packageManager
-                    .getPackageInfo(getApplication<Application>().packageName, 0)
-                    .lastUpdateTime
-            }.getOrDefault(0L)
-        return if (supportsHotReload && updateTime > bootEpochMs) {
-            ServiceLoadEvent.HotReload(updateTime)
-        } else {
-            ServiceLoadEvent.Boot(bootEpochMs)
-        }
+        _serviceLoadEvent.value =
+            ServiceLoadEvent.Boot(System.currentTimeMillis() - SystemClock.elapsedRealtime())
     }
 
     fun onServiceDied() {
@@ -143,7 +117,6 @@ class ScopeViewModel(
 
     private fun saveLockedPackages(packages: Set<String>) {
         App.prefsRepository.save(Prefs.LOCKED_PACKAGES, packages.joinToString("|"))
-        App.boundService?.let { HotReloadTrigger.tryReload(it) }
     }
 
     companion object {

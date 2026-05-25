@@ -8,8 +8,6 @@ import eu.hxreborn.biometricapplock.hook.registerSystemServerHooks
 import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.util.Logger
 import io.github.libxposed.api.XposedModule
-import io.github.libxposed.api.XposedModuleInterface.HotReloadedParam
-import io.github.libxposed.api.XposedModuleInterface.HotReloadingParam
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 
@@ -18,8 +16,6 @@ internal lateinit var module: BiometricAppLockModule
     private set
 
 class BiometricAppLockModule : XposedModule() {
-    private var systemServerClassLoader: ClassLoader? = null
-
     @Suppress("unused")
     private var prefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -30,7 +26,6 @@ class BiometricAppLockModule : XposedModule() {
 
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
         Logger.inSystemServer = true
-        systemServerClassLoader = param.classLoader
         val locked = readLockedPackages()
         Logger.log(Log.INFO, "system_server starting pid=${Process.myPid()} locked=${locked.size}")
         Logger.debug { "locked=$locked" }
@@ -41,56 +36,6 @@ class BiometricAppLockModule : XposedModule() {
         registerPrefsListener()
     }
 
-    override fun onHotReloading(param: HotReloadingParam): Boolean {
-        systemServerClassLoader?.let { param.setSavedInstanceState(it) }
-        return true
-    }
-
-    override fun onHotReloaded(param: HotReloadedParam) {
-        module = this
-        Logger.inSystemServer = param.isSystemServer
-
-        if (!param.isSystemServer) {
-            param.oldHookHandles.forEach { runCatching { it.unhook() } }
-            Logger.log(Log.INFO, "hot reloaded in ${param.processName}")
-            return
-        }
-
-        val classLoader =
-            param.savedInstanceState as? ClassLoader
-                ?: param.oldHookHandles
-                    .firstOrNull()
-                    ?.executable
-                    ?.declaringClass
-                    ?.classLoader
-                ?: resolveSystemServerClassLoader()
-        param.oldHookHandles.forEach { runCatching { it.unhook() } }
-
-        if (classLoader == null) {
-            Logger.log(Log.ERROR, "hot reload: system_server classLoader not available")
-            return
-        }
-        systemServerClassLoader = classLoader
-
-        val locked = readLockedPackages()
-        Logger.log(Log.INFO, "hot reloaded pid=${Process.myPid()} locked=${locked.size}")
-        Logger.debug { "locked=$locked" }
-        runCatching { registerSystemServerHooks(classLoader, locked) }
-            .onFailure { Logger.log(Log.ERROR, "hot reload reregister failed: ${it.message}", it) }
-        registerPrefsListener()
-    }
-
-    private fun resolveSystemServerClassLoader(): ClassLoader? =
-        runCatching {
-            Class
-                .forName(
-                    "com.android.server.wm.ActivityStartInterceptor",
-                    false,
-                    Thread.currentThread().contextClassLoader,
-                ).classLoader
-        }.getOrNull()
-
-    // TODO: LSPosed v2.0.3-it (7736) leaves this listener silent, so ScopeViewModel.saveLockedPackages forces a hot reload instead
     private fun registerPrefsListener() {
         runCatching {
             val prefs = getRemotePreferences(Prefs.GROUP)

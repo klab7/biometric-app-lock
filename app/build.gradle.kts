@@ -190,7 +190,6 @@ abstract class GenerateXposedModuleProp : DefaultTask() {
             minApiVersion=${moduleApiVersion.get()}
             targetApiVersion=${moduleApiVersion.get()}
             staticScope=true
-            autoHotReload=true
             """.trimIndent() + "\n",
         )
         xposedDir.resolve("scope.list").writeText("system\n")

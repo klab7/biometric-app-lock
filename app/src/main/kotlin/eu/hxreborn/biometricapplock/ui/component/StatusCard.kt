@@ -81,10 +81,7 @@ fun StatusCard(
                             DateUtils.FORMAT_ABBREV_RELATIVE,
                         ).toString()
                 }
-            when (serviceLoadEvent) {
-                is ServiceLoadEvent.Boot -> stringResource(R.string.status_loaded_at_boot, relative)
-                is ServiceLoadEvent.HotReload -> stringResource(R.string.status_loaded_via_hot_reload, relative)
-            }
+            stringResource(R.string.status_loaded_at_boot, relative)
         } else {
             null
         }
