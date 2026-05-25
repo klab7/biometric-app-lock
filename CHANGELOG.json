@@ -1,33 +1,105 @@
 {
-  "version": "1.0.0",
+  "version": "0.3.0-test",
   "entries": [
     {
       "type": "feat",
-      "title": "system_server hook design",
-      "description": "All interception runs inside system_server. Target activities are never created before auth completes.",
-      "version": "1.0.0",
-      "date": "2026-05-25"
-    },
-    {
-      "type": "feat",
-      "title": "libxposed API 102 hot-reload",
-      "description": "Module supports hot reload via autoHotReload. No reboot required after most updates.",
-      "version": "1.0.0",
-      "date": "2026-05-25"
+      "title": "refresh ui and add in-app update checker",
+      "description": "Dashboard shows your locked apps and biometric hardware, settings group into shared-corner cards, and Updates checks GitHub for new releases.",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/f2d1de3569a4e2d096ffc1602c20cb0e5bca414a",
+      "scope": null,
+      "breaking": false
     },
     {
       "type": "fix",
-      "title": "Re-lock on screen wake",
-      "description": "All unlocked packages are cleared when the screen powers on.",
-      "version": "1.0.0",
-      "date": "2026-05-25"
+      "title": "expire unlock tokens after 2 min, reject non-system caller",
+      "description": "Unlock tokens now expire on a 2-minute window and the auth prompt rejects any caller that is not system_server.",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/eb8a8f998230c20775008c368e52797de44056b3",
+      "scope": "hook",
+      "breaking": false
     },
     {
-      "type": "breaking",
-      "title": "Drops per-process hook model",
-      "description": "The original Activity-lifecycle hook design (ActivityHooks, Blackout, Trampoline) has been removed. Requires system_server scope enabled in LSPosed Manager.",
-      "version": "1.0.0",
-      "date": "2026-05-25"
+      "type": "ci",
+      "title": "only trigger release on tag push",
+      "description": "- Remove branches trigger from release workflow\n- Pushes to main were failing because softprops/action-gh-release requires a tag",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/82b5a4eca7796bce13b7dbdd8f5568fcfc6f5205",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "add libxposed API 102 hot reload support",
+      "description": "- Bump libxposed deps to 102.0.0-SNAPSHOT with Sonatype snapshot repo\n- Add onHotReloading/onHotReloaded lifecycle for system_server hooks\n- Add HotReloadTrigger to push config via service on install and pref change\n- Skip RebootRequired status when framework reports PROP_RT_HOT_RELOAD\n- Add autoHotReload=true to module.prop\n- Bump AGP to 9.2.1 (fixes D8 record desugaring)\n- Demote per-interaction hook logs to DEBUG\n- Add prefs listener for live config updates (not firing on 102 snapshot)",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/c03f85d4c48be7898799581f9ba064721bbd4102",
+      "scope": "hook",
+      "breaking": false
+    },
+    {
+      "type": "misc",
+      "title": "bump gradle-wrapper from 9.4.1 to 9.5.1",
+      "description": "Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.4.1 to 9.5.1.\n- [Release notes](https://github.com/gradle/gradle/releases)\n- [Commits](https://github.com/gradle/gradle/compare/v9.4.1...v9.5.1)\n\n---\nupdated-dependencies:\n- dependency-name: gradle-wrapper\n  dependency-version: 9.5.1\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/pull/5",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "misc",
+      "title": "bump the androidx group with 2 updates",
+      "description": "Bumps the androidx group with 2 updates: androidx.navigation3:navigation3-runtime and androidx.navigation3:navigation3-ui.\n\n\nUpdates `androidx.navigation3:navigation3-runtime` from 1.1.1 to 1.1.2\n\nUpdates `androidx.navigation3:navigation3-ui` from 1.1.1 to 1.1.2\n\nUpdates `androidx.navigation3:navigation3-ui` from 1.1.1 to 1.1.2\n\n---\nupdated-dependencies:\n- dependency-name: androidx.navigation3:navigation3-runtime\n  dependency-version: 1.1.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: androidx\n- dependency-name: androidx.navigation3:navigation3-ui\n  dependency-version: 1.1.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: androidx\n- dependency-name: androidx.navigation3:navigation3-ui\n  dependency-version: 1.1.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: androidx\n...",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/pull/4",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "misc",
+      "title": "bump the compose group with 2 updates",
+      "description": "Bumps the compose group with 2 updates: androidx.compose:compose-bom and androidx.compose.material3:material3.\n\n\nUpdates `androidx.compose:compose-bom` from 2026.05.00 to 2026.05.01\n\nUpdates `androidx.compose.material3:material3` from 1.5.0-alpha19 to 1.5.0-alpha20\n\n---\nupdated-dependencies:\n- dependency-name: androidx.compose:compose-bom\n  dependency-version: 2026.05.01\n  dependency-type: direct:production\n  dependency-group: compose\n- dependency-name: androidx.compose.material3:material3\n  dependency-version: 1.5.0-alpha20\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: compose\n...",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/pull/3",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "misc",
+      "title": "bump AGP from 9.2.0 to 9.2.1",
+      "description": "Bumps the agp group with 1 update: com.android.application.\n\n\nUpdates `com.android.application` from 9.2.0 to 9.2.1\n\n---\nupdated-dependencies:\n- dependency-name: com.android.application\n  dependency-version: 9.2.1\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n  dependency-group: agp\n...",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/pull/1",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "misc",
+      "title": "bump the actions group with 3 updates",
+      "description": "Bumps the actions group with 3 updates: [actions/checkout](https://github.com/actions/checkout), [actions/setup-java](https://github.com/actions/setup-java) and [softprops/action-gh-release](https://github.com/softprops/action-gh-release).\n\n\nUpdates `actions/checkout` from 4 to 6\n- [Release notes](https://github.com/actions/checkout/releases)\n- [Changelog](https://github.com/actions/checkout/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/actions/checkout/compare/v4...v6)\n\nUpdates `actions/setup-java` from 4 to 5\n- [Release notes](https://github.com/actions/setup-java/releases)\n- [Commits](https://github.com/actions/setup-java/compare/v4...v5)\n\nUpdates `softprops/action-gh-release` from 2 to 3\n- [Release notes](https://github.com/softprops/action-gh-release/releases)\n- [Changelog](https://github.com/softprops/action-gh-release/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/softprops/action-gh-release/compare/v2...v3)\n\n---\nupdated-dependencies:\n- dependency-name: actions/checkout\n  dependency-version: '6'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n  dependency-group: actions\n- dependency-name: actions/setup-java\n  dependency-version: '5'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n  dependency-group: actions\n- dependency-name: softprops/action-gh-release\n  dependency-version: '3'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n  dependency-group: actions\n...",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/pull/2",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "live config updates via prefs listener",
+      "description": "- Register SharedPreferences change listener on RemotePreferences at boot\n- Updates lockedPackages in-place when the app toggles a lock, no reboot needed\n- Demote per-interaction hook logs to DEBUG (launched, gating recents, screen on)\n- Quiet recents pass-through for non-locked apps\n- Rename \"token accepted\" to \"unlocked\" for clarity",
+      "version": "0.3.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/dbf440cae6e087b9f0d38a6966239c1216ba3f61",
+      "scope": "hook",
+      "breaking": false
     }
   ]
 }
