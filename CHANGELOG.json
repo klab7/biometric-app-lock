@@ -1,64 +1,14 @@
 {
-  "version": "0.5.0-test",
+  "version": "0.6.0",
   "entries": [
     {
-      "type": "feat",
-      "title": "replace changelog type labels with M3 color-coded chips",
-      "description": "Each entry now shows a squared, uppercase chip tinted by change type using Material You roles, plus a separate muted scope chip.",
-      "version": "0.5.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/009b515ecc3eecbcb644da314d6816d529fdb7f8",
-      "scope": "ui",
-      "breaking": false
-    },
-    {
-      "type": "feat",
-      "title": "redesign update sheet with cookie badge and morph transition",
-      "description": "Loading spinner crossfades into a cookie-shaped badge when the check finishes, button stays disabled during fetch, and the sheet title is now consistent across states.",
-      "version": "0.5.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/a129468bb3a15e1b795c361742545124f2910e50",
-      "scope": "ui",
-      "breaking": false
-    },
-    {
-      "type": "fix",
-      "title": "hide changelog items in update sheet when up to date",
-      "description": null,
-      "version": "0.5.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/803d568609ffd7393941306ae7cdf7825b868ee6",
-      "scope": "ui",
-      "breaking": false
-    },
-    {
-      "type": "fix",
-      "title": "animate floating toolbar visibility on navigation",
-      "description": null,
-      "version": "0.5.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/214c06fad3306fd968030da38222cff265bca504",
-      "scope": "ui",
-      "breaking": false
-    },
-    {
       "type": "refactor",
-      "title": "add experimental notice and fix status card wording",
-      "description": null,
-      "version": "0.5.0-test",
+      "title": "overhaul changelog/update sheet and state model",
+      "description": "Replace the flat Callout card with a centered SoftBlobBadge for error and\nrate-limit states, matching the up-to-date visual language. Section badges now\nuse surfaceContainerLowest/onSurface for misc types to avoid blending into the\ncard background. What's New icon changed to NewReleases (outlined).\n\nRemove dead fields from FeatureSheetItem (icon, isBreaking), dead sealed\nvariant UpdateSheetState.LatestUnknown, and the redundant dragHandle default.\nMerge FailedOffline + FailedNetwork into a single Failed(cause, cachedFallback)\nto eliminate four duplicate when-branches across three files.\n\nAdd ServiceUnavailable to FailureCause for 5xx responses. Handle HTTP 429\nsecondary rate limits with Retry-After delta header. Show IP rate-limit context\nbelow the rate-limit badge. Simplify ChangelogSheet sheetState derivation and\nlatestVersionForMatch.",
+      "version": "0.6.0",
       "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/85f041e0b9828d235f49f9161ab64a3010bf2e80",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/aad346e8495e4969cb82f5cf4ad076c819fde87b",
       "scope": "ui",
-      "breaking": false
-    },
-    {
-      "type": "fix",
-      "title": "remove broken Binder UID check from BiometricAuthActivity",
-      "description": "Binder.getCallingUid() in onCreate returns the process's own UID, not the launcher's, so it always rejected the launch. The auth token is the real security gate.",
-      "version": "0.5.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/00d2c94d478f466e9feb33b231342804be246c66",
-      "scope": "auth",
       "breaking": false
     }
   ]
