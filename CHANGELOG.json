@@ -2,12 +2,22 @@
   "version": "0.6.0",
   "entries": [
     {
-      "type": "refactor",
-      "title": "overhaul changelog/update sheet and state model",
-      "description": "Replace the flat Callout card with a centered SoftBlobBadge for error and\nrate-limit states, matching the up-to-date visual language. Section badges now\nuse surfaceContainerLowest/onSurface for misc types to avoid blending into the\ncard background. What's New icon changed to NewReleases (outlined).\n\nRemove dead fields from FeatureSheetItem (icon, isBreaking), dead sealed\nvariant UpdateSheetState.LatestUnknown, and the redundant dragHandle default.\nMerge FailedOffline + FailedNetwork into a single Failed(cause, cachedFallback)\nto eliminate four duplicate when-branches across three files.\n\nAdd ServiceUnavailable to FailureCause for 5xx responses. Handle HTTP 429\nsecondary rate limits with Retry-After delta header. Show IP rate-limit context\nbelow the rate-limit badge. Simplify ChangelogSheet sheetState derivation and\nlatestVersionForMatch.",
+      "type": "feat",
+      "title": "auto-show update sheet when a new version is found",
+      "description": "Auto-check now fires on every app foreground via repeatOnLifecycle. When it finds a newer version, the update sheet opens automatically and the Settings tab shows a badge.",
       "version": "0.6.0",
       "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/aad346e8495e4969cb82f5cf4ad076c819fde87b",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/6cccc9369ca4648d4b07b8559a734ab9e6f65fd9",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "refactor",
+      "title": "overhaul changelog/update sheet and state model",
+      "description": "Error and rate-limit states render a centered cookie badge instead of a flat card.",
+      "version": "0.6.0",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/6d2eaca1d78b8f7103d608864fc3425953e1b48a",
       "scope": "ui",
       "breaking": false
     }

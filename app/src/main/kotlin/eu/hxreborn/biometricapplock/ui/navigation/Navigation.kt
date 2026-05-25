@@ -22,6 +22,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -55,8 +57,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -143,9 +148,12 @@ fun MainNavDisplay(
     modifier: Modifier = Modifier,
 ) {
     val slideInDistance = with(LocalDensity.current) { Tokens.NavSlideDistance.roundToPx() }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        App.updateRepository.maybeAutoCheck()
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            App.updateRepository.maybeAutoCheck()
+        }
     }
 
     NavDisplay(
@@ -229,6 +237,7 @@ fun MainNavDisplay(
 fun BottomNav(
     backStack: NavBackStack<NavKey>,
     currentKey: NavKey?,
+    showUpdateBadge: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -317,10 +326,20 @@ fun BottomNav(
                             ),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = stringResource(item.titleRes),
-                            )
+                            val isSettingsTab = item.key is Screen.Settings
+                            if (isSettingsTab && showUpdateBadge) {
+                                BadgedBox(badge = { Badge() }) {
+                                    Icon(
+                                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = stringResource(item.titleRes),
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = stringResource(item.titleRes),
+                                )
+                            }
                             AnimatedVisibility(
                                 visible = selected,
                                 enter = expandHorizontally(animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec()),
