@@ -28,7 +28,7 @@ sealed interface UpdateState {
     ) : UpdateState
 }
 
-enum class FailureCause { Offline, Network, Parse }
+enum class FailureCause { Offline, Network, Parse, ServiceUnavailable }
 
 sealed interface UpdateSheetState {
     @get:StringRes
@@ -53,26 +53,22 @@ sealed interface UpdateSheetState {
         override val titleRes: Int = R.string.updates_sheet_title_available
     }
 
-    data class FailedOffline(
+    data class Failed(
+        val cause: FailureCause,
         val cachedFallback: UpdateState.Available?,
     ) : UpdateSheetState {
-        override val titleRes: Int = R.string.updates_sheet_title_offline
-    }
-
-    data class FailedNetwork(
-        val cachedFallback: UpdateState.Available?,
-    ) : UpdateSheetState {
-        override val titleRes: Int = R.string.updates_sheet_title_failed
+        override val titleRes: Int =
+            when (cause) {
+                FailureCause.Offline -> R.string.updates_sheet_title_offline
+                FailureCause.ServiceUnavailable -> R.string.updates_sheet_title_service_unavailable
+                FailureCause.Network, FailureCause.Parse -> R.string.updates_sheet_title_failed
+            }
     }
 
     data class RateLimited(
         val resetAtEpochMs: Long?,
     ) : UpdateSheetState {
         override val titleRes: Int = R.string.updates_sheet_title_rate_limited
-    }
-
-    data object LatestUnknown : UpdateSheetState {
-        override val titleRes: Int = R.string.updates_sheet_title_unknown
     }
 
     data object WhatsNew : UpdateSheetState {
@@ -103,10 +99,7 @@ fun UpdateState.toSheetState(
         }
 
         is UpdateState.Failed -> {
-            when (cause) {
-                FailureCause.Offline -> UpdateSheetState.FailedOffline(cached)
-                FailureCause.Network, FailureCause.Parse -> UpdateSheetState.FailedNetwork(cached)
-            }
+            UpdateSheetState.Failed(cause = cause, cachedFallback = cached)
         }
 
         is UpdateState.RateLimited -> {

@@ -4,14 +4,22 @@ package eu.hxreborn.biometricapplock.ui.component
 
 import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,61 +33,69 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import eu.hxreborn.biometricapplock.R
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.updates.ChangeType
+import eu.hxreborn.biometricapplock.updates.FailureCause
 import eu.hxreborn.biometricapplock.updates.UpdateSheetState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class FeatureSheetItem(
-    val icon: ImageVector,
     val label: String? = null,
     val scope: String? = null,
     val changeType: ChangeType? = null,
     val title: String,
     val body: String? = null,
-    val isBreaking: Boolean = false,
     val onClick: (() -> Unit)? = null,
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun WhatsNewSheet(
     state: UpdateSheetState,
@@ -91,7 +107,6 @@ fun WhatsNewSheet(
     onLater: (String) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val title = stringResource(state.titleRes)
 
@@ -112,7 +127,6 @@ fun WhatsNewSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
             modifier =
@@ -127,7 +141,20 @@ fun WhatsNewSheet(
                     },
             verticalArrangement = Arrangement.spacedBy(Tokens.SheetSectionSpacing),
         ) {
-            SheetHeader(versionLabel = versionLabel, title = title)
+            val itemCount =
+                when (state) {
+                    UpdateSheetState.Checking,
+                    is UpdateSheetState.UpToDate,
+                    is UpdateSheetState.RateLimited,
+                    -> null
+
+                    is UpdateSheetState.Available -> items.size.takeIf { state.notesAvailable && it > 0 }
+
+                    is UpdateSheetState.Failed -> items.size.takeIf { state.cachedFallback != null && it > 0 }
+
+                    UpdateSheetState.WhatsNew -> items.size.takeIf { it > 0 }
+                }
+            SheetHeader(versionLabel = versionLabel, title = title, itemCount = itemCount)
 
             SheetBody(state = state, items = items, sheetTitle = title)
 
@@ -148,11 +175,12 @@ fun WhatsNewSheet(
 private fun SheetHeader(
     versionLabel: String,
     title: String,
+    itemCount: Int? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.SheetItemSpacing),
-        modifier = Modifier.semantics { heading() },
+        modifier = Modifier.fillMaxWidth().semantics { heading() },
     ) {
         Surface(
             shape = MaterialTheme.shapes.small,
@@ -174,7 +202,22 @@ private fun SheetHeader(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
         )
+        if (itemCount != null) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                Text(
+                    text = pluralStringResource(R.plurals.updates_sheet_change_count, itemCount, itemCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = Tokens.SpacingSm, vertical = Tokens.SpacingXs),
+                )
+            }
+        }
     }
 }
 
@@ -259,25 +302,26 @@ private fun SheetBody(
                 ItemList(items)
             }
 
-            is UpdateSheetState.FailedOffline -> {
-                Callout(
-                    icon = Icons.Outlined.CloudOff,
-                    contentDescription = sheetTitle,
-                    text = stringResource(R.string.updates_dialog_failed_offline),
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                )
-                if (state.cachedFallback != null && items.isNotEmpty()) {
-                    CachedCaption()
-                    ItemList(items)
-                }
-            }
+            is UpdateSheetState.Failed -> {
+                val (icon, text) =
+                    when (state.cause) {
+                        FailureCause.Offline -> {
+                            Icons.Outlined.CloudOff to stringResource(R.string.updates_dialog_failed_offline)
+                        }
 
-            is UpdateSheetState.FailedNetwork -> {
-                Callout(
-                    icon = Icons.Outlined.ErrorOutline,
-                    contentDescription = sheetTitle,
-                    text = stringResource(R.string.updates_dialog_failed_network),
+                        FailureCause.ServiceUnavailable -> {
+                            Icons.Outlined.CloudOff to
+                                stringResource(R.string.updates_dialog_failed_service_unavailable)
+                        }
+
+                        FailureCause.Network, FailureCause.Parse -> {
+                            Icons.Outlined.ErrorOutline to
+                                stringResource(R.string.updates_dialog_failed_network)
+                        }
+                    }
+                CenteredStatusBadge(
+                    icon = icon,
+                    text = text,
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -302,24 +346,19 @@ private fun SheetBody(
                     } else {
                         stringResource(R.string.updates_dialog_rate_limited_body_unknown)
                     }
-                Callout(
+                CenteredStatusBadge(
                     icon = Icons.Outlined.HourglassEmpty,
-                    contentDescription = sheetTitle,
                     text = body,
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
-            }
-
-            UpdateSheetState.LatestUnknown -> {
-                Callout(
-                    icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                    contentDescription = sheetTitle,
-                    text = stringResource(R.string.updates_sheet_latest_unknown_body),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                Text(
+                    text = stringResource(R.string.updates_rate_limit_context),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                ItemList(items)
             }
 
             UpdateSheetState.WhatsNew -> {
@@ -329,14 +368,201 @@ private fun SheetBody(
     }
 }
 
+private val CHANGE_TYPE_ORDER =
+    listOf(
+        ChangeType.Breaking,
+        ChangeType.Feat,
+        ChangeType.Fix,
+        ChangeType.Perf,
+        ChangeType.Security,
+        ChangeType.Refactor,
+        ChangeType.Revert,
+        ChangeType.Ci,
+        ChangeType.Test,
+        ChangeType.Misc,
+    )
+
 @Composable
 private fun ItemList(items: List<FeatureSheetItem>) {
     if (items.isEmpty()) return
+    val grouped = items.groupBy { it.changeType ?: ChangeType.Misc }
+    val sections =
+        CHANGE_TYPE_ORDER.mapNotNull { type ->
+            val group = grouped[type] ?: return@mapNotNull null
+            val label = group.first().label ?: return@mapNotNull null
+            Triple(type, label, group)
+        }
+    val shuffledShapes = remember { sectionBadgeShapes.shuffled() }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.SheetItemSpacing)) {
-        items.forEachIndexed { index, item ->
-            FeatureSheetItemRow(item = item, index = index)
+        sections.forEachIndexed { index, (type, label, group) ->
+            TypeSection(
+                type = type,
+                label = label,
+                items = group,
+                index = index,
+                badgeShape = shuffledShapes[index].toShape(),
+            )
         }
     }
+}
+
+private val sectionBadgeShapes =
+    listOf(
+        MaterialShapes.Cookie4Sided,
+        MaterialShapes.Clover4Leaf,
+        MaterialShapes.Sunny,
+        MaterialShapes.SoftBurst,
+        MaterialShapes.PuffyDiamond,
+        MaterialShapes.Flower,
+        MaterialShapes.Ghostish,
+        MaterialShapes.Cookie9Sided,
+        MaterialShapes.Clover8Leaf,
+        MaterialShapes.SoftBoom,
+    )
+
+@Composable
+private fun TypeSection(
+    type: ChangeType,
+    label: String,
+    items: List<FeatureSheetItem>,
+    index: Int = 0,
+    badgeShape: Shape = MaterialShapes.Cookie9Sided.toShape(),
+) {
+    val cs = MaterialTheme.colorScheme
+    val cardAlpha = remember { Animatable(0f) }
+    val cardOffsetY = remember { Animatable(16f) }
+    val iconScale = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        delay(index * 60L)
+        launch { cardAlpha.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow)) }
+        launch { cardOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow)) }
+        delay(80L)
+        iconScale.animateTo(
+            1f,
+            spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+        )
+    }
+
+    val labelColor =
+        when (type) {
+            ChangeType.Breaking, ChangeType.Security -> cs.error
+            ChangeType.Fix -> cs.secondary
+            else -> cs.primary
+        }
+    val iconContainerColor =
+        when (type) {
+            ChangeType.Breaking, ChangeType.Security -> cs.errorContainer
+            ChangeType.Feat -> cs.primaryContainer
+            ChangeType.Fix -> cs.secondaryContainer
+            ChangeType.Perf -> cs.tertiaryContainer
+            else -> cs.surfaceContainerLowest
+        }
+    val iconContentColor =
+        when (type) {
+            ChangeType.Breaking, ChangeType.Security -> cs.onErrorContainer
+            ChangeType.Feat -> cs.onPrimaryContainer
+            ChangeType.Fix -> cs.onSecondaryContainer
+            ChangeType.Perf -> cs.onTertiaryContainer
+            else -> cs.onSurface
+        }
+
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = cardAlpha.value
+                    translationY = cardOffsetY.value
+                },
+        shape = MaterialTheme.shapes.large,
+        color = cs.surfaceContainerHigh,
+    ) {
+        Column(modifier = Modifier.padding(Tokens.SpacingSm)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Tokens.SpacingXs),
+            ) {
+                SoftBlobBadge(
+                    size = 36.dp,
+                    shape = badgeShape,
+                    containerColor = iconContainerColor,
+                    modifier =
+                        Modifier.graphicsLayer {
+                            scaleX = iconScale.value
+                            scaleY = iconScale.value
+                        },
+                ) {
+                    Icon(
+                        imageVector = changeTypeIcon(type),
+                        contentDescription = null,
+                        tint = iconContentColor,
+                        modifier = Modifier.size(Tokens.SmallIconSize),
+                    )
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = labelColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(Tokens.SpacingXs))
+            Column(verticalArrangement = Arrangement.spacedBy(Tokens.SpacingSm)) {
+                items.forEachIndexed { i, item ->
+                    if (i > 0) EntryDivider()
+                    ChangelogEntryRow(item)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChangelogEntryRow(item: FeatureSheetItem) {
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val hasBody = !item.body.isNullOrBlank()
+    var expanded by remember { mutableStateOf(false) }
+    val titleText =
+        buildAnnotatedString {
+            append(item.title)
+            if (!item.scope.isNullOrBlank()) {
+                withStyle(SpanStyle(color = onSurfaceVariant)) {
+                    append(" (${item.scope})")
+                }
+            }
+        }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    when {
+                        hasBody -> Modifier.clickable { expanded = !expanded }
+                        item.onClick != null -> Modifier.clickable(onClick = item.onClick)
+                        else -> Modifier
+                    },
+                ).padding(vertical = Tokens.SpacingXs),
+        verticalArrangement = Arrangement.spacedBy(Tokens.SpacingXs),
+    ) {
+        Text(text = titleText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        AnimatedVisibility(
+            visible = expanded && hasBody,
+            enter = expandVertically(spring(stiffness = Spring.StiffnessMediumLow)),
+            exit = shrinkVertically(spring(stiffness = Spring.StiffnessMediumLow)),
+        ) {
+            Text(
+                text = item.body ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                color = onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EntryDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 }
 
 @Composable
@@ -346,6 +572,38 @@ private fun CachedCaption() {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+@Composable
+private fun CenteredStatusBadge(
+    icon: ImageVector,
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = Tokens.EmptyStatePadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Tokens.SheetSectionSpacing),
+    ) {
+        SoftBlobBadge(
+            size = Tokens.UpToDateBadgeSize,
+            containerColor = containerColor,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
+                tint = contentColor,
+            )
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable
@@ -415,10 +673,7 @@ private fun SheetActions(
             )
         }
 
-        is UpdateSheetState.FailedOffline,
-        is UpdateSheetState.FailedNetwork,
-        UpdateSheetState.LatestUnknown,
-        -> {
+        is UpdateSheetState.Failed -> {
             PrimaryAction(
                 label = stringResource(R.string.updates_dialog_retry),
                 onClick = onRetry,
@@ -453,10 +708,25 @@ private fun PrimaryAction(
     onClick: () -> Unit,
     enabled: Boolean = true,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "buttonScale",
+    )
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(Tokens.PrimaryActionHeight),
+        interactionSource = interactionSource,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(Tokens.PrimaryActionHeight)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
         shape = CircleShape,
         colors =
             ButtonDefaults.buttonColors(
@@ -487,149 +757,5 @@ private fun SecondaryAction(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
-    }
-}
-
-@Composable
-private fun ChangeTypeChip(
-    label: String,
-    changeType: ChangeType?,
-    isBreaking: Boolean,
-) {
-    val cs = MaterialTheme.colorScheme
-    val containerColor: Color
-    val contentColor: Color
-    when {
-        isBreaking || changeType == ChangeType.Breaking -> {
-            containerColor = cs.error
-            contentColor = cs.onError
-        }
-
-        changeType == ChangeType.Feat -> {
-            containerColor = cs.tertiaryContainer
-            contentColor = cs.onTertiaryContainer
-        }
-
-        changeType == ChangeType.Fix -> {
-            containerColor = cs.errorContainer
-            contentColor = cs.onErrorContainer
-        }
-
-        changeType == ChangeType.Perf -> {
-            containerColor = cs.secondaryContainer
-            contentColor = cs.onSecondaryContainer
-        }
-
-        changeType == ChangeType.Security -> {
-            containerColor = cs.errorContainer
-            contentColor = cs.onErrorContainer
-        }
-
-        changeType == ChangeType.Refactor -> {
-            containerColor = cs.primaryContainer
-            contentColor = cs.onPrimaryContainer
-        }
-
-        else -> {
-            containerColor = cs.surfaceContainerHighest
-            contentColor = cs.onSurfaceVariant
-        }
-    }
-    Surface(shape = MaterialTheme.shapes.extraSmall, color = containerColor) {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            fontWeight = FontWeight.SemiBold,
-            modifier =
-                Modifier.padding(
-                    horizontal = Tokens.ChipHorizontalPadding,
-                    vertical = Tokens.ChipVerticalPadding,
-                ),
-        )
-    }
-}
-
-@Composable
-private fun ScopeChip(label: String) {
-    Surface(shape = MaterialTheme.shapes.extraSmall, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
-            modifier =
-                Modifier.padding(
-                    horizontal = Tokens.ChipHorizontalPadding,
-                    vertical = Tokens.ChipVerticalPadding,
-                ),
-        )
-    }
-}
-
-@Composable
-private fun FeatureSheetItemRow(
-    item: FeatureSheetItem,
-    index: Int,
-) {
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .then(if (item.onClick != null) Modifier.clickable(onClick = item.onClick) else Modifier),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Row(
-            modifier = Modifier.padding(Tokens.PreferencePadding),
-            horizontalArrangement = Arrangement.spacedBy(Tokens.PreferenceHorizontalSpacing),
-            verticalAlignment = Alignment.Top,
-        ) {
-            ExpressiveIconBadge(
-                index = index,
-                size = Tokens.FeatureBadgeSize,
-                containerColor = if (item.isBreaking) MaterialTheme.colorScheme.errorContainer else null,
-            ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(Tokens.FeatureBadgeIconSize),
-                    tint =
-                        if (item.isBreaking) {
-                            MaterialTheme.colorScheme.onErrorContainer
-                        } else {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        },
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(Tokens.SpacingXs)) {
-                if (item.label != null || item.scope != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Tokens.SpacingXs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        item.label?.let { typeLabel ->
-                            ChangeTypeChip(
-                                label = typeLabel,
-                                changeType = item.changeType,
-                                isBreaking = item.isBreaking,
-                            )
-                        }
-                        item.scope?.let { ScopeChip(it) }
-                    }
-                }
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                if (!item.body.isNullOrBlank()) {
-                    Text(
-                        text = item.body,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
     }
 }

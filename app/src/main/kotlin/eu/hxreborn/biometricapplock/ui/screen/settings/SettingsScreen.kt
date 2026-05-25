@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FormatPaint
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Screenshot
 import androidx.compose.material.icons.outlined.Timer
@@ -54,14 +54,12 @@ import eu.hxreborn.biometricapplock.ui.component.FeatureSheetItem
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
 import eu.hxreborn.biometricapplock.ui.component.SectionPosition
 import eu.hxreborn.biometricapplock.ui.component.WhatsNewSheet
-import eu.hxreborn.biometricapplock.ui.component.changeTypeIcon
 import eu.hxreborn.biometricapplock.ui.component.changeTypeLabelRes
 import eu.hxreborn.biometricapplock.ui.screen.RelockDelayDialog
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.util.LauncherIconHelper
 import eu.hxreborn.biometricapplock.updates.ChangeType
 import eu.hxreborn.biometricapplock.updates.UpdateSheetState
-import eu.hxreborn.biometricapplock.updates.UpdateState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -113,13 +111,11 @@ fun SettingsScreen(
                 ?.map { entry ->
                     val type = ChangeType.from(entry.type, entry.breaking)
                     FeatureSheetItem(
-                        icon = changeTypeIcon(type),
                         label = stringResource(changeTypeLabelRes(type)),
                         scope = entry.scope?.takeIf { it.isNotBlank() },
                         changeType = type,
                         title = entry.title,
                         body = entry.description,
-                        isBreaking = type == ChangeType.Breaking,
                     )
                 } ?: emptyList()
 
@@ -267,7 +263,7 @@ fun SettingsScreen(
             item { SettingsSectionHeader(title = stringResource(R.string.settings_about)) }
             item {
                 PreferenceRow(
-                    icon = Icons.Filled.AutoAwesome,
+                    icon = Icons.Outlined.NewReleases,
                     title = stringResource(R.string.about_whats_new_title),
                     summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
                     position = SectionPosition.Top,

@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.dp
 private fun expressiveIconShape(index: Int): Shape =
     when (index.mod(4)) {
         0 -> MaterialShapes.Cookie6Sided.toShape()
-        1 -> RoundedCornerShape(16.dp)
+        1 -> RoundedCornerShape(4.dp)
         2 -> CircleShape
-        else -> RoundedCornerShape(999.dp)
+        else -> MaterialShapes.Cookie9Sided.toShape()
     }
 
 @Composable

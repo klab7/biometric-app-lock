@@ -138,6 +138,8 @@
     <string name="updates_dialog_failed_title">Update check failed</string>
     <string name="updates_dialog_failed_offline">No network connection</string>
     <string name="updates_dialog_failed_network">Could not reach GitHub. Try again later.</string>
+    <string name="updates_dialog_failed_service_unavailable">GitHub is temporarily unavailable. Try again later.</string>
+    <string name="updates_rate_limit_context">GitHub limits unauthenticated requests to 60/hour, shared by IP address.</string>
     <string name="updates_dialog_rate_limited_title">GitHub rate limit reached</string>
     <string name="updates_dialog_rate_limited_body">Too many requests. Try again %1$s.</string>
     <string name="updates_dialog_rate_limited_body_unknown">Too many requests. Try again later.</string>
@@ -153,32 +155,34 @@
     <string name="changelog_retry">Retry</string>
     <string name="changelog_got_it">Done</string>
 
-    <string name="change_type_feat">New</string>
-    <string name="change_type_fix">Fix</string>
-    <string name="change_type_refactor">Improvement</string>
+    <string name="change_type_feat">Features</string>
+    <string name="change_type_fix">Bug Fixes</string>
+    <string name="change_type_refactor">Refactor</string>
     <string name="change_type_perf">Performance</string>
     <string name="change_type_security">Security</string>
-    <string name="change_type_revert">Revert</string>
+    <string name="change_type_revert">Reverts</string>
     <string name="change_type_ci">CI/CD</string>
-    <string name="change_type_test">Test</string>
-    <string name="change_type_misc">Misc</string>
-    <string name="change_type_docs">Docs</string>
+    <string name="change_type_test">Tests</string>
+    <string name="change_type_misc">Miscellaneous</string>
+    <string name="change_type_docs">Documentation</string>
     <string name="change_type_chore">Maintenance</string>
-    <string name="change_type_breaking">Breaking</string>
+    <string name="change_type_breaking">Breaking Changes</string>
 
     <string name="updates_sheet_title_checking">Check for Updates</string>
     <string name="updates_sheet_title_up_to_date">Check for Updates</string>
     <string name="updates_sheet_title_available">Update available</string>
     <string name="updates_sheet_title_failed">Update check failed</string>
     <string name="updates_sheet_title_offline">No connection</string>
+    <string name="updates_sheet_title_service_unavailable">GitHub unavailable</string>
     <string name="updates_sheet_title_rate_limited">GitHub rate limit</string>
-    <string name="updates_sheet_title_unknown">Update status unknown</string>
-
     <string name="updates_sheet_up_to_date_callout">You\'re on the latest version</string>
     <string name="updates_sheet_version_delta">v%1$s → v%2$s</string>
     <string name="updates_sheet_download">Download</string>
     <string name="updates_sheet_later">Later</string>
     <string name="updates_sheet_notes_unavailable">Release notes unavailable for this version</string>
     <string name="updates_sheet_cached_caption">Showing last known result</string>
-    <string name="updates_sheet_latest_unknown_body">Could not determine the latest version</string>
+    <plurals name="updates_sheet_change_count">
+        <item quantity="one">1 change</item>
+        <item quantity="other">%1$d changes</item>
+    </plurals>
 </resources>

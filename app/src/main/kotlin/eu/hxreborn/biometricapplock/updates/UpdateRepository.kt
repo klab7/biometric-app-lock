@@ -120,8 +120,11 @@ class UpdateRepository(
         try {
             val conn = openConnection(RELEASE_URL)
             val code = conn.responseCode
+            val isPrimaryRateLimit =
+                code == 403 && conn.getHeaderField("X-RateLimit-Remaining") == "0"
+            val isSecondaryRateLimit = code == 429
             when {
-                code == 403 && conn.getHeaderField("X-RateLimit-Remaining") == "0" -> {
+                isPrimaryRateLimit -> {
                     val resetMs =
                         conn
                             .getHeaderField(
@@ -129,6 +132,17 @@ class UpdateRepository(
                             )?.toLongOrNull()
                             ?.times(1000)
                     UpdateState.RateLimited(resetMs)
+                }
+
+                isSecondaryRateLimit -> {
+                    val retryAfterSecs = conn.getHeaderField("Retry-After")?.toLongOrNull()
+                    val resetMs = retryAfterSecs?.let { System.currentTimeMillis() + it * 1000 }
+                    UpdateState.RateLimited(resetMs)
+                }
+
+                code in 500..599 -> {
+                    Log.w(TAG, "update check http=$code")
+                    UpdateState.Failed(FailureCause.ServiceUnavailable)
                 }
 
                 code != 200 -> {

@@ -47,34 +47,27 @@ fun ChangelogSheet(onDismiss: () -> Unit) {
         minDelayPassed = true
     }
 
-    val latestVersionForMatch =
-        when (val available = cachedAvailable) {
-            null -> BuildConfig.VERSION_NAME
-            else -> available.latestVersion
-        }
+    val latestVersionForMatch = cachedAvailable?.latestVersion ?: BuildConfig.VERSION_NAME
     val hasMatchingChangelogEntry =
         cachedEntries
             ?.any { it.version != null && it.version == latestVersionForMatch }
             ?: false
 
     val sheetState =
-        remember(updateState, cachedAvailable, hasMatchingChangelogEntry, minDelayPassed) {
-            if (!minDelayPassed) {
-                UpdateSheetState.Checking
-            } else {
-                updateState.toSheetState(
-                    cached = cachedAvailable,
-                    hasMatchingChangelogEntry = hasMatchingChangelogEntry,
-                )
-            }
+        if (!minDelayPassed) {
+            UpdateSheetState.Checking
+        } else {
+            updateState.toSheetState(
+                cached = cachedAvailable,
+                hasMatchingChangelogEntry = hasMatchingChangelogEntry,
+            )
         }
 
     val versionLabel =
         when (sheetState) {
             is UpdateSheetState.Available -> sheetState.latestVersion
             is UpdateSheetState.UpToDate -> sheetState.currentVersion
-            is UpdateSheetState.FailedOffline -> sheetState.cachedFallback?.latestVersion ?: BuildConfig.VERSION_NAME
-            is UpdateSheetState.FailedNetwork -> sheetState.cachedFallback?.latestVersion ?: BuildConfig.VERSION_NAME
+            is UpdateSheetState.Failed -> sheetState.cachedFallback?.latestVersion ?: BuildConfig.VERSION_NAME
             else -> BuildConfig.VERSION_NAME
         }
 
@@ -82,13 +75,11 @@ fun ChangelogSheet(onDismiss: () -> Unit) {
         cachedEntries?.map { entry ->
             val type = ChangeType.from(entry.type, entry.breaking)
             FeatureSheetItem(
-                icon = changeTypeIcon(type),
                 label = stringResource(changeTypeLabelRes(type)),
                 scope = entry.scope?.takeIf { it.isNotBlank() },
                 changeType = type,
                 title = entry.title,
                 body = entry.description,
-                isBreaking = type == ChangeType.Breaking,
                 onClick = entry.url?.let { url -> { uriHandler.openUri(url) } },
             )
         } ?: emptyList()
