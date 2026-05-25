@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.hxreborn.biometricapplock.App
 import eu.hxreborn.biometricapplock.R
 import eu.hxreborn.biometricapplock.prefs.AppOverrides
+import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
 import eu.hxreborn.biometricapplock.ui.screen.settings.PreferenceRow
 import eu.hxreborn.biometricapplock.ui.screen.settings.SettingsSectionHeader
@@ -140,7 +141,7 @@ fun AppDetailScreen(
                         }
                     }
                 },
-                title = { Text(stringResource(R.string.app_detail_title)) },
+                title = { ExpandedTitle(stringResource(R.string.app_detail_title)) },
                 scrollBehavior = scrollBehavior,
             )
         },

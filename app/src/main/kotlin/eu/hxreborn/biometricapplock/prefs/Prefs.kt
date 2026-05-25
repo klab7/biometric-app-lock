@@ -12,6 +12,12 @@ object Prefs {
     val RELOCK_DELAY_SECONDS = IntPref("relock_delay_seconds", 0)
     val DISABLE_FLAG_SECURE = BoolPref("disable_flag_secure", false)
 
-    // Written on every sync so the hook can detect how stale its cached prefs are
+    // hook reads this to gauge cache staleness
     val LAST_REMOTE_WRITE = LongPref("_last_remote_write", 0L)
+
+    val AUTO_CHECK_UPDATE = BoolPref("auto_check_update", false)
+    val LAST_UPDATE_CHECK_MS = LongPref("last_update_check_ms", 0L)
+    val LAST_RELEASE_JSON = StringPref("last_release_json", "")
+    val LAST_CHANGELOG_JSON = StringPref("last_changelog_json", "")
+    val LAST_DISMISSED_AVAILABLE_VERSION = StringPref("last_dismissed_available_version", "")
 }

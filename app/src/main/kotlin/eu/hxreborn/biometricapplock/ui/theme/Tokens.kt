@@ -1,11 +1,14 @@
 package eu.hxreborn.biometricapplock.ui.theme
 
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 object Tokens {
     val ScreenHorizontalPadding: Dp = 16.dp
 
+    val SpacingXs: Dp = 4.dp
     val SpacingSm: Dp = 8.dp
     val SpacingLg: Dp = 16.dp
 
@@ -58,4 +61,12 @@ object Tokens {
     val DetailHeaderIconSize: Dp = 48.dp
     val DetailHeaderCardPadding: Dp = 16.dp
     val DetailHeaderIconTextSpacing: Dp = 16.dp
+
+    val StatusIconSize: Dp = 36.dp
+
+    val ChangelogLoadingHeight: Dp = 120.dp
+    val ChangelogLoadingIndicatorSize: Dp = 48.dp
+
+    val ExpandedTitleLineHeight: TextUnit = 36.sp
+    const val EXPANDED_TITLE_MAX_LINES = 2
 }

@@ -17,6 +17,8 @@ data class AppPrefs(
     val verbose: Boolean,
     val relockDelaySeconds: Int,
     val disableFlagSecure: Boolean,
+    val autoCheckUpdate: Boolean,
+    val lastDismissedAvailableVersion: String,
 ) {
     companion object {
         val Defaults =
@@ -27,6 +29,8 @@ data class AppPrefs(
                 verbose = false,
                 relockDelaySeconds = 0,
                 disableFlagSecure = false,
+                autoCheckUpdate = false,
+                lastDismissedAvailableVersion = "",
             )
     }
 }
@@ -46,6 +50,11 @@ class PrefsRepository(
                         verbose = Prefs.VERBOSE.read(local),
                         relockDelaySeconds = Prefs.RELOCK_DELAY_SECONDS.read(local),
                         disableFlagSecure = Prefs.DISABLE_FLAG_SECURE.read(local),
+                        autoCheckUpdate = Prefs.AUTO_CHECK_UPDATE.read(local),
+                        lastDismissedAvailableVersion =
+                            Prefs.LAST_DISMISSED_AVAILABLE_VERSION.read(
+                                local,
+                            ),
                     ),
                 )
             }
@@ -96,7 +105,7 @@ class PrefsRepository(
                             putString(key, value)
                         }
 
-                        // Writing emptySet<String>() produces kotlin.collections.EmptySet, which remote-prefs can't deserialize
+                        // remote-prefs cannot deserialize EmptySet from emptySet<String>()
                         else -> {
                             Log.w(
                                 "BiometricAppLock",

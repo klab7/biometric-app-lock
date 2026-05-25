@@ -5,9 +5,11 @@ package eu.hxreborn.biometricapplock.ui.screen
 import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.util.LruCache
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -26,7 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -38,7 +42,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,7 +77,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -85,16 +91,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.hxreborn.biometricapplock.App
 import eu.hxreborn.biometricapplock.R
+import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
 import eu.hxreborn.biometricapplock.ui.component.SectionCard
+import eu.hxreborn.biometricapplock.ui.component.SectionPosition
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.util.openAppInfo
 import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -119,22 +131,49 @@ private suspend fun loadApps(
     ownPackage: String,
 ): List<AppItem> =
     withContext(Dispatchers.IO) {
-        pm
-            .queryIntentActivities(launchableAppsIntent(), 0)
-            .asSequence()
-            .mapNotNull { resolveInfo ->
-                val appInfo = resolveInfo.activityInfo?.applicationInfo ?: return@mapNotNull null
-                val packageName = appInfo.packageName
-                if (packageName == ownPackage) return@mapNotNull null
-                AppItem(
-                    applicationInfo = appInfo,
-                    label = appInfo.loadLabel(pm).toString(),
-                    packageName = packageName,
-                    isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                )
-            }.distinctBy { it.packageName }
-            .toList()
+        val entries =
+            pm
+                .queryIntentActivities(launchableAppsIntent(), 0)
+                .asSequence()
+                .mapNotNull { resolveInfo ->
+                    val appInfo = resolveInfo.activityInfo?.applicationInfo ?: return@mapNotNull null
+                    val packageName = appInfo.packageName
+                    if (packageName == ownPackage) return@mapNotNull null
+                    packageName to appInfo
+                }.distinctBy { it.first }
+                .toList()
+
+        coroutineScope {
+            entries
+                .map { (packageName, appInfo) ->
+                    async {
+                        AppItem(
+                            applicationInfo = appInfo,
+                            label = appInfo.loadLabel(pm).toString(),
+                            packageName = packageName,
+                            isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                        )
+                    }
+                }.awaitAll()
+        }
     }
+
+private val iconCache = LruCache<String, ImageBitmap>(200)
+
+@Composable
+private fun rememberAppIcon(appInfo: ApplicationInfo): ImageBitmap? {
+    val pm = LocalContext.current.packageManager
+    val packageName = appInfo.packageName
+    return produceState<ImageBitmap?>(initialValue = iconCache.get(packageName), key1 = packageName) {
+        if (value != null) return@produceState
+        value =
+            withContext(Dispatchers.IO) {
+                runCatching { appInfo.loadIcon(pm).toBitmap().asImageBitmap() }
+                    .getOrNull()
+                    ?.also { iconCache.put(packageName, it) }
+            }
+    }.value
+}
 
 @Composable
 private fun rememberInstalledApps(refreshKey: Int): AppLoadState {
@@ -242,7 +281,6 @@ private fun AppSearchBar(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppIcon(
     icon: ImageBitmap?,
@@ -255,12 +293,6 @@ private fun AppIcon(
     ) {
         if (icon != null) {
             Image(icon, contentDescription = null, modifier = Modifier.fillMaxSize())
-        } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularWavyProgressIndicator(
-                    modifier = Modifier.size(Tokens.LoadingIndicatorSize),
-                )
-            }
         }
     }
 }
@@ -271,22 +303,14 @@ private fun AppRow(
     isChecked: Boolean,
     canToggle: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    position: SectionPosition = SectionPosition.Single,
     onNavigateToDetail: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val icon by produceState<ImageBitmap?>(initialValue = null, key1 = app.packageName) {
-        value =
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    app.applicationInfo
-                        .loadIcon(context.packageManager)
-                        .toBitmap()
-                        .asImageBitmap()
-                }.getOrNull()
-            }
-    }
+    val icon = rememberAppIcon(app.applicationInfo)
 
     SectionCard(
+        position = position,
         onClick = if (canToggle && onNavigateToDetail != null) onNavigateToDetail else null,
         onLongClick = { openAppInfo(context, app.packageName) },
     ) {
@@ -468,8 +492,8 @@ fun AppListScreen(
             scope.filterTo(linkedSetOf()) { it in appPackageNames }
         }
 
-    // Captured once so toggling a row doesn't reorder the list mid-interaction.
-    // Re-keyed on refreshKey so pull-to-refresh acts like a fresh screen entry.
+    // snapshot of scope so toggling a row doesn't reorder the visible list
+    // keyed on refreshKey so pull-to-refresh restarts the snapshot
     val scopeAtScreenOpen = remember(refreshKey) { scope }
 
     val sortedApps =
@@ -479,6 +503,13 @@ fun AppListScreen(
             )
         }
 
+    val lazyListState = rememberLazyListState()
+    val scrollbarColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val scrollbarAlpha by animateFloatAsState(
+        targetValue = if (lazyListState.isScrollInProgress) 0.5f else 0f,
+        animationSpec = tween(if (lazyListState.isScrollInProgress) 150 else 500),
+        label = "scrollbar",
+    )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -488,7 +519,7 @@ fun AppListScreen(
             Surface(color = MaterialTheme.colorScheme.surface) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     LargeTopAppBar(
-                        title = { Text(stringResource(R.string.tab_apps)) },
+                        title = { ExpandedTitle(stringResource(R.string.tab_apps)) },
                         scrollBehavior = scrollBehavior,
                         colors =
                             TopAppBarDefaults.topAppBarColors(
@@ -582,10 +613,12 @@ fun AppListScreen(
                 },
             ) {
                 LazyColumn(
+                    state = lazyListState,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .scrollbar(lazyListState, scrollbarColor, scrollbarAlpha),
                     contentPadding =
                         PaddingValues(
                             top = Tokens.SpacingSm,
@@ -594,8 +627,15 @@ fun AppListScreen(
                 ) {
                     when {
                         isInitialLoading -> {
-                            items(Tokens.SHIMMER_PLACEHOLDER_COUNT) {
-                                SectionCard {
+                            items(Tokens.SHIMMER_PLACEHOLDER_COUNT) { index ->
+                                val position =
+                                    when {
+                                        Tokens.SHIMMER_PLACEHOLDER_COUNT == 1 -> SectionPosition.Single
+                                        index == 0 -> SectionPosition.Top
+                                        index == Tokens.SHIMMER_PLACEHOLDER_COUNT - 1 -> SectionPosition.Bottom
+                                        else -> SectionPosition.Middle
+                                    }
+                                SectionCard(position = position) {
                                     ShimmerListItem()
                                 }
                             }
@@ -621,10 +661,17 @@ fun AppListScreen(
                         }
 
                         else -> {
-                            items(
+                            itemsIndexed(
                                 items = sortedApps,
-                                key = { app -> app.packageName },
-                            ) { app ->
+                                key = { _, app -> app.packageName },
+                            ) { index, app ->
+                                val position =
+                                    when {
+                                        sortedApps.size == 1 -> SectionPosition.Single
+                                        index == 0 -> SectionPosition.Top
+                                        index == sortedApps.lastIndex -> SectionPosition.Bottom
+                                        else -> SectionPosition.Middle
+                                    }
                                 AppRow(
                                     app = app,
                                     isChecked = app.packageName in scope,
@@ -632,6 +679,7 @@ fun AppListScreen(
                                     onCheckedChange = { checked ->
                                         viewModel.toggleScope(app.packageName, checked)
                                     },
+                                    position = position,
                                     onNavigateToDetail = { onNavigateToAppDetail(app.packageName) },
                                 )
                             }
@@ -649,4 +697,35 @@ fun AppListScreen(
             )
         }
     }
+}
+
+private fun Modifier.scrollbar(
+    state: LazyListState,
+    color: Color,
+    alpha: Float,
+) = drawWithContent {
+    drawContent()
+    if (alpha == 0f) return@drawWithContent
+    val info = state.layoutInfo
+    if (info.totalItemsCount == 0 || info.visibleItemsInfo.size >= info.totalItemsCount) return@drawWithContent
+
+    val thumbRatio = info.visibleItemsInfo.size.toFloat() / info.totalItemsCount
+    val thumbHeight = (thumbRatio * size.height).coerceAtLeast(24.dp.toPx())
+    val avgItemHeight =
+        info.visibleItemsInfo
+            .map { it.size }
+            .average()
+            .toFloat()
+            .coerceAtLeast(1f)
+    val scrolled = state.firstVisibleItemIndex + state.firstVisibleItemScrollOffset / avgItemHeight
+    val maxScroll = (info.totalItemsCount - info.visibleItemsInfo.size).coerceAtLeast(1).toFloat()
+    val thumbTop = (scrolled / maxScroll).coerceIn(0f, 1f) * (size.height - thumbHeight)
+    val width = 4.dp.toPx()
+
+    drawRoundRect(
+        color = color.copy(alpha = alpha),
+        topLeft = Offset(size.width - width - 2.dp.toPx(), thumbTop),
+        size = Size(width, thumbHeight),
+        cornerRadius = CornerRadius(width / 2),
+    )
 }

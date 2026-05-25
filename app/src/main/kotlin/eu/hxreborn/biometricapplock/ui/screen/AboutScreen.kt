@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Info
@@ -34,10 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -52,8 +48,9 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import eu.hxreborn.biometricapplock.BuildConfig
 import eu.hxreborn.biometricapplock.R
+import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
+import eu.hxreborn.biometricapplock.ui.component.SectionPosition
 import eu.hxreborn.biometricapplock.ui.component.SoftBlobBadge
-import eu.hxreborn.biometricapplock.ui.component.WhatsNewSheet
 import eu.hxreborn.biometricapplock.ui.screen.settings.PreferenceRow
 import eu.hxreborn.biometricapplock.ui.screen.settings.SettingsSectionHeader
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
@@ -73,7 +70,6 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val packageName = context.packageName
-    var showWhatsNew by remember { mutableStateOf(false) }
     val icon by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
         value =
             withContext(Dispatchers.IO) {
@@ -109,7 +105,7 @@ fun AboutScreen(
                         }
                     }
                 },
-                title = { Text(stringResource(R.string.about_title)) },
+                title = { ExpandedTitle(stringResource(R.string.about_title)) },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -170,6 +166,7 @@ fun AboutScreen(
                     icon = Icons.Outlined.Info,
                     title = stringResource(R.string.about_app_version_title),
                     summary = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    position = SectionPosition.Top,
                 )
             }
             item {
@@ -177,6 +174,7 @@ fun AboutScreen(
                     icon = Icons.Outlined.Extension,
                     title = stringResource(R.string.about_libxposed_api_title),
                     summary = BuildConfig.LIBXPOSED_API_VERSION.toString(),
+                    position = SectionPosition.Middle,
                 )
             }
             item {
@@ -186,22 +184,9 @@ fun AboutScreen(
                     summary =
                         framework?.let { "${it.name} ${it.version}" }
                             ?: stringResource(R.string.settings_lsposed_framework_unbound),
-                )
-            }
-
-            item { SettingsSectionHeader(title = stringResource(R.string.about_section_release)) }
-            item {
-                PreferenceRow(
-                    icon = Icons.Filled.AutoAwesome,
-                    title = stringResource(R.string.about_whats_new_title),
-                    summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
-                    onClick = { showWhatsNew = true },
+                    position = SectionPosition.Bottom,
                 )
             }
         }
-    }
-
-    if (showWhatsNew) {
-        WhatsNewSheet(onDismiss = { showWhatsNew = false })
     }
 }

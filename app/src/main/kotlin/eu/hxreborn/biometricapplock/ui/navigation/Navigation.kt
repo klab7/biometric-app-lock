@@ -35,6 +35,7 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import eu.hxreborn.biometricapplock.App
 import eu.hxreborn.biometricapplock.R
 import eu.hxreborn.biometricapplock.ui.screen.AboutScreen
 import eu.hxreborn.biometricapplock.ui.screen.AppDetailScreen
@@ -142,6 +144,10 @@ fun MainNavDisplay(
 ) {
     val slideInDistance = with(LocalDensity.current) { Tokens.NavSlideDistance.roundToPx() }
 
+    LaunchedEffect(Unit) {
+        App.updateRepository.maybeAutoCheck()
+    }
+
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
@@ -179,6 +185,7 @@ fun MainNavDisplay(
                                 backStack.clear()
                                 backStack.add(Screen.Apps)
                             },
+                        onNavigateToAppDetail = { pkg -> backStack.add(Screen.AppDetail(pkg)) },
                         contentPadding = contentPadding,
                     )
                 }

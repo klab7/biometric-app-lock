@@ -1,0 +1,210 @@
+package eu.hxreborn.biometricapplock.updates
+
+import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.util.Log
+import androidx.core.content.edit
+import eu.hxreborn.biometricapplock.BuildConfig
+import eu.hxreborn.biometricapplock.prefs.Prefs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+private const val TAG = "BiometricAppLock"
+private const val REPO = "hxreborn/biometric-app-lock"
+private const val RELEASE_URL = "https://api.github.com/repos/$REPO/releases/latest"
+private const val CHANGELOG_URL = "https://raw.githubusercontent.com/$REPO/main/CHANGELOG.json"
+private const val AUTO_CHECK_THROTTLE_MS = 6 * 60 * 60 * 1000L
+private const val CONNECT_TIMEOUT_MS = 5_000
+private const val READ_TIMEOUT_MS = 8_000
+
+class UpdateRepository(
+    private val app: Application,
+) {
+    private val prefs = app.getSharedPreferences(Prefs.GROUP, Context.MODE_PRIVATE)
+    private val json = Json { ignoreUnknownKeys = true }
+
+    private val _cachedAvailable = MutableStateFlow<UpdateState.Available?>(null)
+    val cachedAvailable: StateFlow<UpdateState.Available?> = _cachedAvailable.asStateFlow()
+
+    private val _cachedChangelog = MutableStateFlow<List<ChangelogEntry>?>(null)
+    val cachedChangelog: StateFlow<List<ChangelogEntry>?> = _cachedChangelog.asStateFlow()
+
+    private val _lastCheckedEpochMs = MutableStateFlow(Prefs.LAST_UPDATE_CHECK_MS.read(prefs))
+    val lastCheckedEpochMs: StateFlow<Long> = _lastCheckedEpochMs.asStateFlow()
+
+    private val _currentState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val currentState: StateFlow<UpdateState> = _currentState.asStateFlow()
+
+    private val checkMutex = Mutex()
+
+    init {
+        val cachedRelease = Prefs.LAST_RELEASE_JSON.read(prefs)
+        if (cachedRelease.isNotEmpty()) {
+            runCatching {
+                val obj = JSONObject(cachedRelease)
+                val tag = obj.getString("tag_name").trimStart('v', 'V')
+                val url = obj.getString("html_url")
+                val current = BuildConfig.VERSION_NAME
+                if (isNewer(tag, current)) {
+                    _cachedAvailable.value = UpdateState.Available(current, tag, url)
+                }
+            }
+        }
+        val cachedJson = Prefs.LAST_CHANGELOG_JSON.read(prefs)
+        if (cachedJson.isNotEmpty()) {
+            runCatching {
+                _cachedChangelog.value =
+                    json.decodeFromString<ChangelogManifest>(cachedJson).entries
+            }
+        }
+    }
+
+    suspend fun checkNow(): UpdateState =
+        withContext(Dispatchers.IO) {
+            if (!checkMutex.tryLock()) return@withContext _currentState.value
+            try {
+                _currentState.value = UpdateState.Checking
+                val result =
+                    if (!isOnline()) {
+                        UpdateState.Failed(FailureCause.Offline)
+                    } else {
+                        fetchRelease().also {
+                            if (it is UpdateState.UpToDate || it is UpdateState.Available) {
+                                val now = System.currentTimeMillis()
+                                prefs.edit { Prefs.LAST_UPDATE_CHECK_MS.write(this, now) }
+                                _lastCheckedEpochMs.value = now
+                            }
+                        }
+                    }
+                _currentState.value = result
+                result
+            } finally {
+                checkMutex.unlock()
+            }
+        }
+
+    suspend fun maybeAutoCheck() {
+        if (!Prefs.AUTO_CHECK_UPDATE.read(prefs)) return
+        val elapsed = System.currentTimeMillis() - Prefs.LAST_UPDATE_CHECK_MS.read(prefs)
+        if (elapsed < AUTO_CHECK_THROTTLE_MS) return
+        checkNow()
+    }
+
+    suspend fun fetchChangelog(): List<ChangelogEntry>? =
+        withContext(Dispatchers.IO) {
+            val fallback = _cachedChangelog.value
+            if (!isOnline()) return@withContext fallback
+            runCatching {
+                val raw = httpGet(CHANGELOG_URL) ?: return@withContext fallback
+                val entries = json.decodeFromString<ChangelogManifest>(raw).entries
+                _cachedChangelog.value = entries
+                prefs.edit { Prefs.LAST_CHANGELOG_JSON.write(this, raw) }
+                entries
+            }.getOrElse {
+                Log.w(TAG, "changelog fetch failed: ${it.message}")
+                fallback
+            }
+        }
+
+    private fun fetchRelease(): UpdateState =
+        try {
+            val conn = openConnection(RELEASE_URL)
+            val code = conn.responseCode
+            when {
+                code == 403 && conn.getHeaderField("X-RateLimit-Remaining") == "0" -> {
+                    val resetMs =
+                        conn
+                            .getHeaderField(
+                                "X-RateLimit-Reset",
+                            )?.toLongOrNull()
+                            ?.times(1000)
+                    UpdateState.RateLimited(resetMs)
+                }
+
+                code != 200 -> {
+                    Log.w(TAG, "update check http=$code")
+                    UpdateState.Failed(FailureCause.Network)
+                }
+
+                else -> {
+                    parseReleaseBody(conn.inputStream.bufferedReader().use { it.readText() })
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "update check exception: ${e.message}")
+            UpdateState.Failed(FailureCause.Network)
+        }
+
+    private fun parseReleaseBody(body: String): UpdateState =
+        try {
+            val obj = JSONObject(body)
+            val tag = obj.getString("tag_name").trimStart('v', 'V')
+            val releaseUrl = obj.getString("html_url")
+            val current = BuildConfig.VERSION_NAME
+            prefs.edit { Prefs.LAST_RELEASE_JSON.write(this, body) }
+            if (isNewer(tag, current)) {
+                UpdateState.Available(current, tag, releaseUrl).also { _cachedAvailable.value = it }
+            } else {
+                _cachedAvailable.value = null
+                UpdateState.UpToDate(current)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "release parse failed: ${e.message}")
+            UpdateState.Failed(FailureCause.Parse)
+        }
+
+    private fun httpGet(urlString: String): String? =
+        runCatching {
+            val conn = openConnection(urlString)
+            if (conn.responseCode != 200) {
+                null
+            } else {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            }
+        }.getOrNull()
+
+    private fun openConnection(urlString: String): HttpURLConnection =
+        (URL(urlString).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            setRequestProperty("User-Agent", "biometric-app-lock/${BuildConfig.VERSION_NAME}")
+            setRequestProperty("Accept", "application/vnd.github+json")
+        }
+
+    private fun isOnline(): Boolean {
+        val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    private fun isNewer(
+        remote: String,
+        current: String,
+    ): Boolean =
+        runCatching {
+            val r = remote.split(".").map { it.toIntOrNull() ?: 0 }
+            val c = current.split(".").map { it.toIntOrNull() ?: 0 }
+            val len = maxOf(r.size, c.size)
+            (0 until len).firstNotNullOfOrNull { i ->
+                val rv = r.getOrElse(i) { 0 }
+                val cv = c.getOrElse(i) { 0 }
+                when {
+                    rv > cv -> true
+                    rv < cv -> false
+                    else -> null
+                }
+            } ?: false
+        }.getOrDefault(false)
+}

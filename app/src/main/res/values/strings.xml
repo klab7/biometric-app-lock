@@ -11,10 +11,11 @@
 
     <string name="dashboard_locked_apps_title">Locked apps</string>
     <string name="dashboard_locked_apps_all">All</string>
+    <string name="dashboard_locked_apps_more">more</string>
     <string name="dashboard_locked_apps_empty">Add apps to lock</string>
     <string name="env_footer_unbound">Xposed not bound</string>
 
-    <string name="status_active">Enabled</string>
+    <string name="status_active">Module enabled</string>
     <string name="status_inactive">Not enabled</string>
     <string name="status_inactive_action">Enable the module in your Xposed manager, then reopen this app</string>
     <string name="status_reboot_required">Reboot required</string>
@@ -25,6 +26,25 @@
         <item quantity="one">1 app locked</item>
         <item quantity="other">%1$d apps locked</item>
     </plurals>
+    <string name="status_loaded_at_boot">Service loaded at boot %1$s</string>
+    <string name="status_loaded_via_hot_reload">Service loaded via hot reload %1$s</string>
+
+    <string name="dashboard_biometric_title">Hardware</string>
+    <string name="dashboard_biometric_fingerprint">Fingerprint</string>
+    <string name="dashboard_biometric_face">Face unlock</string>
+    <string name="dashboard_biometric_class_strong">Class 3 · STRONG</string>
+    <string name="dashboard_biometric_class_weak">Class 2 · WEAK</string>
+    <string name="dashboard_biometric_chip_enrolled">Enrolled</string>
+    <plurals name="dashboard_biometric_chip_count">
+        <item quantity="one">1 enrolled</item>
+        <item quantity="other">%1$d enrolled</item>
+    </plurals>
+    <string name="dashboard_biometric_chip_not_enrolled">Not enrolled</string>
+    <string name="dashboard_biometric_chip_no_sensor">No sensor</string>
+    <string name="dashboard_biometric_chip_unavailable">Unavailable</string>
+    <string name="dashboard_biometric_chip_update">Update required</string>
+    <string name="dashboard_biometric_last_auth">Last authentication</string>
+
 
     <string name="apps_search_placeholder">Search apps</string>
     <string name="apps_search_clear_cd">Clear search</string>
@@ -40,24 +60,23 @@
 
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
+    <string name="settings_theme_summary">Light, dark, or follow system</string>
     <string name="settings_theme_system">Follow system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_dynamic_color">Dynamic color</string>
     <string name="settings_dynamic_color_summary">Use wallpaper colors</string>
 
-    <string name="settings_privacy">Privacy</string>
     <string name="settings_hide_launcher">Hide from launcher</string>
     <string name="settings_hide_launcher_summary">Open from LSPosed manager only</string>
 
-    <string name="settings_lock">Lock</string>
+    <string name="settings_lock">Lock &amp; privacy</string>
     <string name="settings_relock_delay_title">Re-lock delay</string>
+    <string name="settings_relock_delay_summary">How long an app stays unlocked after you leave it</string>
 
-    <string name="settings_secure_display">Secure display</string>
     <string name="settings_disable_flag_secure_title">Disable FLAG_SECURE after unlock</string>
-    <string name="settings_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication.</string>
+    <string name="settings_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication</string>
 
-    <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_verbose_logging">Debug logging</string>
     <string name="settings_verbose_logging_summary">Verbose logging for troubleshooting</string>
 
@@ -107,9 +126,66 @@
 
     <string name="app_detail_section_secure_display">Secure display</string>
     <string name="app_detail_disable_flag_secure_title">Disable FLAG_SECURE after unlock</string>
-    <string name="app_detail_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication.</string>
+    <string name="app_detail_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication</string>
 
     <string name="app_detail_section_advanced">Advanced</string>
     <string name="app_detail_open_app_info_title">Open system app info</string>
     <string name="app_detail_open_app_info_summary">Use Android\'s Force stop action if changes do not apply until restart.</string>
+
+    <string name="settings_updates">Updates</string>
+    <string name="updates_check_title">Check for updates</string>
+    <string name="updates_check_summary">Check GitHub Releases for the latest version</string>
+    <string name="updates_auto_check_title">Auto-check updates</string>
+    <string name="updates_auto_check_summary">Check for updates when the app opens</string>
+
+    <string name="updates_dialog_up_to_date_title">Up to date</string>
+    <string name="updates_dialog_up_to_date_body">v%1$s is the latest version</string>
+    <string name="updates_dialog_available_title">Update available</string>
+    <string name="updates_dialog_available_body">v%2$s is available (you have v%1$s)</string>
+    <string name="updates_dialog_failed_title">Update check failed</string>
+    <string name="updates_dialog_failed_offline">No network connection</string>
+    <string name="updates_dialog_failed_network">Could not reach GitHub. Try again later.</string>
+    <string name="updates_dialog_rate_limited_title">GitHub rate limit reached</string>
+    <string name="updates_dialog_rate_limited_body">Too many requests. Try again %1$s.</string>
+    <string name="updates_dialog_rate_limited_body_unknown">Too many requests. Try again later.</string>
+    <string name="updates_dialog_close">Close</string>
+    <string name="updates_dialog_open_release">Open release</string>
+    <string name="updates_dialog_retry">Retry</string>
+
+    <string name="about_changelog_title">Changelog</string>
+    <string name="about_changelog_summary">Release notes from GitHub</string>
+
+    <string name="changelog_title">Changelog</string>
+    <string name="changelog_fetch_failed">Could not load changelog</string>
+    <string name="changelog_retry">Retry</string>
+    <string name="changelog_got_it">Done</string>
+
+    <string name="change_type_feat">New</string>
+    <string name="change_type_fix">Fix</string>
+    <string name="change_type_refactor">Improvement</string>
+    <string name="change_type_perf">Performance</string>
+    <string name="change_type_security">Security</string>
+    <string name="change_type_revert">Revert</string>
+    <string name="change_type_ci">CI/CD</string>
+    <string name="change_type_test">Test</string>
+    <string name="change_type_misc">Misc</string>
+    <string name="change_type_docs">Docs</string>
+    <string name="change_type_chore">Maintenance</string>
+    <string name="change_type_breaking">Breaking</string>
+
+    <string name="updates_sheet_title_checking">Checking for updates</string>
+    <string name="updates_sheet_title_up_to_date">You\'re up to date</string>
+    <string name="updates_sheet_title_available">Update available</string>
+    <string name="updates_sheet_title_failed">Update check failed</string>
+    <string name="updates_sheet_title_offline">No connection</string>
+    <string name="updates_sheet_title_rate_limited">GitHub rate limit</string>
+    <string name="updates_sheet_title_unknown">Update status unknown</string>
+
+    <string name="updates_sheet_up_to_date_callout">You\'re on the latest version</string>
+    <string name="updates_sheet_version_delta">v%1$s → v%2$s</string>
+    <string name="updates_sheet_download">Download</string>
+    <string name="updates_sheet_later">Later</string>
+    <string name="updates_sheet_notes_unavailable">Release notes unavailable for this version</string>
+    <string name="updates_sheet_cached_caption">Showing last known result</string>
+    <string name="updates_sheet_latest_unknown_body">Could not determine the latest version</string>
 </resources>

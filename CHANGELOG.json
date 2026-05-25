@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "entries": [
+    {
+      "type": "feat",
+      "title": "system_server hook design",
+      "description": "All interception runs inside system_server. Target activities are never created before auth completes.",
+      "version": "1.0.0",
+      "date": "2026-05-25"
+    },
+    {
+      "type": "feat",
+      "title": "libxposed API 102 hot-reload",
+      "description": "Module supports hot reload via autoHotReload. No reboot required after most updates.",
+      "version": "1.0.0",
+      "date": "2026-05-25"
+    },
+    {
+      "type": "fix",
+      "title": "Re-lock on screen wake",
+      "description": "All unlocked packages are cleared when the screen powers on.",
+      "version": "1.0.0",
+      "date": "2026-05-25"
+    },
+    {
+      "type": "breaking",
+      "title": "Drops per-process hook model",
+      "description": "The original Activity-lifecycle hook design (ActivityHooks, Blackout, Trampoline) has been removed. Requires system_server scope enabled in LSPosed Manager.",
+      "version": "1.0.0",
+      "date": "2026-05-25"
+    }
+  ]
+}

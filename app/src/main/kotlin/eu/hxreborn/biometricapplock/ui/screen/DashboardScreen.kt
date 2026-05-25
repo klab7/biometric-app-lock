@@ -1,10 +1,8 @@
 package eu.hxreborn.biometricapplock.ui.screen
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,7 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.hxreborn.biometricapplock.R
-import eu.hxreborn.biometricapplock.ui.component.LockedAppsStrip
+import eu.hxreborn.biometricapplock.ui.component.BiometricHardwareSection
+import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
+import eu.hxreborn.biometricapplock.ui.component.LockedAppsSection
 import eu.hxreborn.biometricapplock.ui.component.StatusCard
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
@@ -31,10 +31,12 @@ import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
 fun DashboardScreen(
     viewModel: ScopeViewModel,
     onNavigateToApps: () -> Unit,
+    onNavigateToAppDetail: (String) -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val moduleStatus by viewModel.moduleStatus.collectAsStateWithLifecycle()
     val scope by viewModel.scope.collectAsStateWithLifecycle()
+    val serviceLoadEvent by viewModel.serviceLoadEvent.collectAsStateWithLifecycle()
     val launchablePackageNames = rememberLaunchablePackageNames()
     val lockedApps =
         remember(scope, launchablePackageNames) {
@@ -47,7 +49,7 @@ fun DashboardScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             LargeTopAppBar(
-                title = { Text(stringResource(R.string.app_bar_title)) },
+                title = { ExpandedTitle(stringResource(R.string.app_bar_title)) },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -64,17 +66,17 @@ fun DashboardScreen(
                 StatusCard(
                     status = moduleStatus,
                     lockedAppCount = lockedApps.size,
+                    serviceLoadEvent = serviceLoadEvent,
                 )
             }
-
-            item { Spacer(Modifier.height(Tokens.SpacingLg)) }
-
             item {
-                LockedAppsStrip(
+                LockedAppsSection(
                     scope = lockedApps,
-                    onClick = onNavigateToApps,
+                    onNavigateToApps = onNavigateToApps,
+                    onNavigateToAppDetail = onNavigateToAppDetail,
                 )
             }
+            item { BiometricHardwareSection() }
         }
     }
 }

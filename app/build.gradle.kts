@@ -131,6 +131,7 @@ dependencies {
     implementation(libs.material.motion.compose.core)
 
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 val ktlintCheck by tasks.registering(JavaExec::class) {

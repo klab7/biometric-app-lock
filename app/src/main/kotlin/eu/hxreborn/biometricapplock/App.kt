@@ -6,23 +6,28 @@ import android.util.Log
 import eu.hxreborn.biometricapplock.prefs.AppOverridesRepository
 import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.prefs.PrefsRepository
+import eu.hxreborn.biometricapplock.updates.UpdateRepository
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import java.util.concurrent.CopyOnWriteArrayList
 
 class App : Application() {
+    private var serviceListener: XposedServiceHelper.OnServiceListener? = null
+
     override fun onCreate() {
         super.onCreate()
+        if (serviceListener != null) return
         val localPrefs = getSharedPreferences(Prefs.GROUP, Context.MODE_PRIVATE)
         prefsRepository =
             PrefsRepository(localPrefs) {
                 runCatching { boundService?.getRemotePreferences(Prefs.GROUP) }.getOrNull()
             }
+        updateRepository = UpdateRepository(this)
         appOverridesRepository =
             AppOverridesRepository(localPrefs) {
                 runCatching { boundService?.getRemotePreferences(Prefs.GROUP) }.getOrNull()
             }
-        XposedServiceHelper.registerListener(
+        val listener =
             object : XposedServiceHelper.OnServiceListener {
                 override fun onServiceBind(service: XposedService) {
                     Log.i(
@@ -40,8 +45,9 @@ class App : Application() {
                     boundService = null
                     listeners.forEach { it.onServiceDied(service) }
                 }
-            },
-        )
+            }
+        serviceListener = listener
+        XposedServiceHelper.registerListener(listener)
     }
 
     companion object {
@@ -52,6 +58,9 @@ class App : Application() {
             private set
 
         lateinit var prefsRepository: PrefsRepository
+            private set
+
+        lateinit var updateRepository: UpdateRepository
             private set
 
         lateinit var appOverridesRepository: AppOverridesRepository

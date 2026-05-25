@@ -22,9 +22,22 @@ import kotlinx.coroutines.flow.stateIn
 data class FrameworkInfo(
     val name: String,
     val version: String,
+    val supportsHotReload: Boolean,
 )
 
 enum class ModuleStatus { NotEnabled, RebootRequired, Enabled }
+
+sealed interface ServiceLoadEvent {
+    val epochMs: Long
+
+    data class Boot(
+        override val epochMs: Long,
+    ) : ServiceLoadEvent
+
+    data class HotReload(
+        override val epochMs: Long,
+    ) : ServiceLoadEvent
+}
 
 class ScopeViewModel(
     application: Application,
@@ -38,6 +51,9 @@ class ScopeViewModel(
     private val _scope = MutableStateFlow<Set<String>>(emptySet())
     val scope: StateFlow<Set<String>> = _scope.asStateFlow()
 
+    private val _serviceLoadEvent = MutableStateFlow<ServiceLoadEvent?>(null)
+    val serviceLoadEvent: StateFlow<ServiceLoadEvent?> = _serviceLoadEvent.asStateFlow()
+
     private val apkUpdatedAfterBoot: Boolean by lazy {
         runCatching {
             val bootEpoch = System.currentTimeMillis() - SystemClock.elapsedRealtime()
@@ -45,8 +61,6 @@ class ScopeViewModel(
             info.lastUpdateTime > bootEpoch
         }.getOrDefault(false)
     }
-
-    private var supportsHotReload = false
 
     val moduleStatus: StateFlow<ModuleStatus> =
         _framework
@@ -56,7 +70,7 @@ class ScopeViewModel(
     private fun deriveStatus(framework: FrameworkInfo?): ModuleStatus =
         when {
             framework == null -> ModuleStatus.NotEnabled
-            apkUpdatedAfterBoot && !supportsHotReload -> ModuleStatus.RebootRequired
+            apkUpdatedAfterBoot && !framework.supportsHotReload -> ModuleStatus.RebootRequired
             else -> ModuleStatus.Enabled
         }
 
@@ -66,15 +80,38 @@ class ScopeViewModel(
     }
 
     fun onServiceBound(service: XposedService) {
-        supportsHotReload =
+        val hotReload =
             runCatching {
                 service.frameworkProperties and XposedService.PROP_RT_HOT_RELOAD != 0L
             }.getOrDefault(false)
-        _framework.value = FrameworkInfo(service.frameworkName, "v${service.frameworkVersion}")
+        _framework.value =
+            FrameworkInfo(
+                name = service.frameworkName,
+                version = "v${service.frameworkVersion}",
+                supportsHotReload = hotReload,
+            )
+        _serviceLoadEvent.value = deriveServiceLoadEvent(hotReload)
+    }
+
+    private fun deriveServiceLoadEvent(supportsHotReload: Boolean): ServiceLoadEvent {
+        val bootEpochMs = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+        val updateTime =
+            runCatching {
+                getApplication<Application>()
+                    .packageManager
+                    .getPackageInfo(getApplication<Application>().packageName, 0)
+                    .lastUpdateTime
+            }.getOrDefault(0L)
+        return if (supportsHotReload && updateTime > bootEpochMs) {
+            ServiceLoadEvent.HotReload(updateTime)
+        } else {
+            ServiceLoadEvent.Boot(bootEpochMs)
+        }
     }
 
     fun onServiceDied() {
         _framework.value = null
+        _serviceLoadEvent.value = null
     }
 
     fun toggleScope(
