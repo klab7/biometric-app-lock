@@ -4,10 +4,8 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.hardware.biometrics.BiometricPrompt
-import android.os.Binder
 import android.os.Bundle
 import android.os.CancellationSignal
-import android.os.Process
 import android.util.Log
 
 private const val TAG = "BiometricAppLock"
@@ -20,13 +18,6 @@ class BiometricAuthActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val callingUid = Binder.getCallingUid()
-        if (callingUid != Process.SYSTEM_UID) {
-            Log.w(TAG, "rejected caller uid=$callingUid")
-            finish()
-            return
-        }
-
         targetPkg = intent.getStringExtra(EXTRA_TARGET_PKG)
         targetCls = intent.getStringExtra(EXTRA_TARGET_CLS)
         authToken = intent.getStringExtra(EXTRA_AUTH_TOKEN)
