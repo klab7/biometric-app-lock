@@ -98,7 +98,7 @@ fun ChangelogSheet(onDismiss: () -> Unit) {
     )
 }
 
-private fun changeTypeIcon(type: ChangeType): ImageVector =
+internal fun changeTypeIcon(type: ChangeType): ImageVector =
     when (type) {
         ChangeType.Feat -> Icons.Filled.AutoAwesome
         ChangeType.Fix -> Icons.Outlined.BugReport
@@ -112,7 +112,7 @@ private fun changeTypeIcon(type: ChangeType): ImageVector =
         ChangeType.Breaking -> Icons.Outlined.PriorityHigh
     }
 
-private fun changeTypeLabelRes(type: ChangeType): Int =
+internal fun changeTypeLabelRes(type: ChangeType): Int =
     when (type) {
         ChangeType.Feat -> R.string.change_type_feat
         ChangeType.Fix -> R.string.change_type_fix

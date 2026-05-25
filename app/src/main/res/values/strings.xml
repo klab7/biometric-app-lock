@@ -102,12 +102,6 @@
     <string name="whats_new_version_badge">v%1$s</string>
     <string name="whats_new_title">What\'s New</string>
     <string name="whats_new_got_it">Got it</string>
-    <string name="whats_new_biometric_title">Biometric lock</string>
-    <string name="whats_new_biometric_body">Gate any app behind a fingerprint or face prompt. Protection runs at the activity level.</string>
-    <string name="whats_new_privacy_title">Privacy shield</string>
-    <string name="whats_new_privacy_body">FLAG_SECURE plus a disabled recents preview keeps locked apps out of screenshots and the task switcher.</string>
-    <string name="whats_new_scope_title">Scope management</string>
-    <string name="whats_new_scope_body">Add or remove protected apps live from the Apps tab. No rebuilds, no scope lists to maintain.</string>
     <string name="about_section_links">Links</string>
     <string name="about_section_versions">Versions</string>
     <string name="about_section_release">Release</string>

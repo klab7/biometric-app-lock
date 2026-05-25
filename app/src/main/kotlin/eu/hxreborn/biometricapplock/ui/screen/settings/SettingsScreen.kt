@@ -11,10 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FormatPaint
@@ -33,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,9 +55,12 @@ import eu.hxreborn.biometricapplock.ui.component.FeatureSheetItem
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
 import eu.hxreborn.biometricapplock.ui.component.SectionPosition
 import eu.hxreborn.biometricapplock.ui.component.WhatsNewSheet
+import eu.hxreborn.biometricapplock.ui.component.changeTypeIcon
+import eu.hxreborn.biometricapplock.ui.component.changeTypeLabelRes
 import eu.hxreborn.biometricapplock.ui.screen.RelockDelayDialog
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.util.LauncherIconHelper
+import eu.hxreborn.biometricapplock.updates.ChangeType
 import eu.hxreborn.biometricapplock.updates.UpdateSheetState
 import eu.hxreborn.biometricapplock.updates.UpdateState
 import kotlinx.coroutines.launch
@@ -103,26 +104,29 @@ fun SettingsScreen(
     }
 
     if (showWhatsNew) {
+        val changelogEntries by App.updateRepository.cachedChangelog.collectAsStateWithLifecycle()
+
+        LaunchedEffect(Unit) { App.updateRepository.fetchChangelog() }
+
+        val whatsNewItems =
+            changelogEntries
+                ?.filter { it.version == BuildConfig.VERSION_NAME }
+                ?.map { entry ->
+                    val type = ChangeType.from(entry.type, entry.breaking)
+                    val typeLabel = stringResource(changeTypeLabelRes(type))
+                    val labelText = if (!entry.scope.isNullOrBlank()) "$typeLabel · ${entry.scope}" else typeLabel
+                    FeatureSheetItem(
+                        icon = changeTypeIcon(type),
+                        label = labelText,
+                        title = entry.title,
+                        body = entry.description,
+                        isBreaking = type == ChangeType.Breaking,
+                    )
+                } ?: emptyList()
+
         WhatsNewSheet(
             state = UpdateSheetState.WhatsNew,
-            items =
-                listOf(
-                    FeatureSheetItem(
-                        icon = Icons.Filled.Fingerprint,
-                        title = stringResource(R.string.whats_new_biometric_title),
-                        body = stringResource(R.string.whats_new_biometric_body),
-                    ),
-                    FeatureSheetItem(
-                        icon = Icons.Filled.Shield,
-                        title = stringResource(R.string.whats_new_privacy_title),
-                        body = stringResource(R.string.whats_new_privacy_body),
-                    ),
-                    FeatureSheetItem(
-                        icon = Icons.Filled.Apps,
-                        title = stringResource(R.string.whats_new_scope_title),
-                        body = stringResource(R.string.whats_new_scope_body),
-                    ),
-                ),
+            items = whatsNewItems,
             versionLabel = BuildConfig.VERSION_NAME,
             onDismiss = { showWhatsNew = false },
         )
