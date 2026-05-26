@@ -77,8 +77,8 @@ VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
 sed -i "s/^version\.name=.*/version.name=${VERSION}/" gradle.properties
 sed -i "s/^version\.code=.*/version.code=${VERSION_CODE}/" gradle.properties
 
-# Generate CHANGELOG.json from cliff context
-git cliff --config .github/cliff.toml --context --tag "$TAG" --unreleased \
+# Generate CHANGELOG.json from cliff context (last 5 versions)
+git cliff --config .github/cliff.toml --context --tag "$TAG" \
 	| python3 tools/cliff_to_changelog.py "$TAG" >CHANGELOG.json
 
 git add gradle.properties CHANGELOG.json

@@ -2,11 +2,11 @@
 """Convert `git cliff --context` JSON output into the in-app CHANGELOG.json shape.
 
 Invoked by .github/release.sh as:
-    git cliff --config .github/cliff.toml --context --tag "$TAG" --unreleased \
+    git cliff --config .github/cliff.toml --context --tag "$TAG" \
         | python3 tools/cliff_to_changelog.py "$TAG" > CHANGELOG.json
 
 Stdin: cliff context JSON (list of releases, each with `version`, `commits`).
-Stdout: in-app CHANGELOG.json (object with `version`, `entries`).
+Stdout: in-app CHANGELOG.json (latest MAX_VERSIONS releases, keyed by version).
 """
 
 from __future__ import annotations
@@ -91,6 +91,9 @@ def transform_commit(commit: dict, version: str, owner: str, repo: str) -> dict:
     return entry
 
 
+MAX_VERSIONS = 5
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(f"usage: {argv[0]} <tag>", file=sys.stderr)
@@ -108,11 +111,15 @@ def main(argv: list[str]) -> int:
         print("expected non-empty cliff context array", file=sys.stderr)
         return 1
 
-    release = context[0]
-    commits = release.get("commits") or []
     owner, repo = load_remote()
+    entries: list[dict] = []
+    for release in context[:MAX_VERSIONS]:
+        rel_version = release.get("version") or version
+        if rel_version.startswith("v"):
+            rel_version = rel_version[1:]
+        for c in release.get("commits") or []:
+            entries.append(transform_commit(c, rel_version, owner, repo))
 
-    entries = [transform_commit(c, version, owner, repo) for c in commits]
     payload = {"version": version, "entries": entries}
 
     json.dump(payload, sys.stdout, indent=2, ensure_ascii=False)

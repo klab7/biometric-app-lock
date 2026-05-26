@@ -29,7 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,14 +100,10 @@ fun SettingsScreen(
     }
 
     if (showWhatsNew) {
-        val changelogEntries by App.updateRepository.cachedChangelog.collectAsStateWithLifecycle()
-
-        LaunchedEffect(Unit) { App.updateRepository.fetchChangelog() }
-
         val whatsNewItems =
-            changelogEntries
-                ?.filter { it.version == BuildConfig.VERSION_NAME }
-                ?.map { entry ->
+            App.updateRepository.bundledChangelog
+                .filter { it.version == BuildConfig.VERSION_NAME }
+                .map { entry ->
                     val type = ChangeType.from(entry.type, entry.breaking)
                     FeatureSheetItem(
                         label = stringResource(changeTypeLabelRes(type)),
@@ -117,7 +112,7 @@ fun SettingsScreen(
                         title = entry.title,
                         body = entry.description,
                     )
-                } ?: emptyList()
+                }
 
         WhatsNewSheet(
             state = UpdateSheetState.WhatsNew,

@@ -72,17 +72,19 @@ fun ChangelogSheet(onDismiss: () -> Unit) {
         }
 
     val items =
-        cachedEntries?.map { entry ->
-            val type = ChangeType.from(entry.type, entry.breaking)
-            FeatureSheetItem(
-                label = stringResource(changeTypeLabelRes(type)),
-                scope = entry.scope?.takeIf { it.isNotBlank() },
-                changeType = type,
-                title = entry.title,
-                body = entry.description,
-                onClick = entry.url?.let { url -> { uriHandler.openUri(url) } },
-            )
-        } ?: emptyList()
+        cachedEntries
+            ?.filter { it.version == latestVersionForMatch }
+            ?.map { entry ->
+                val type = ChangeType.from(entry.type, entry.breaking)
+                FeatureSheetItem(
+                    label = stringResource(changeTypeLabelRes(type)),
+                    scope = entry.scope?.takeIf { it.isNotBlank() },
+                    changeType = type,
+                    title = entry.title,
+                    body = entry.description,
+                    onClick = entry.url?.let { url -> { uriHandler.openUri(url) } },
+                )
+            } ?: emptyList()
 
     WhatsNewSheet(
         state = sheetState,

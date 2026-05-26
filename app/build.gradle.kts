@@ -150,6 +150,25 @@ val ktlintFormat by tasks.registering(JavaExec::class) {
     args("-F", "src/**/*.kt")
 }
 
+abstract class BundleChangelog : DefaultTask() {
+    @get:InputFile
+    abstract val changelogFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun run() {
+        val dest = outputDir.get().asFile
+        dest.mkdirs()
+        changelogFile.get().asFile.copyTo(dest.resolve("changelog.json"), overwrite = true)
+    }
+}
+
+val bundleChangelog by tasks.registering(BundleChangelog::class) {
+    changelogFile.set(rootProject.file("CHANGELOG.json"))
+}
+
 abstract class GenerateXposedModuleProp : DefaultTask() {
     @get:Input
     abstract val moduleId: Property<String>
@@ -211,6 +230,10 @@ androidComponents {
         variant.sources.resources?.addGeneratedSourceDirectory(
             generateXposedModuleProp,
             GenerateXposedModuleProp::outputDir,
+        )
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            bundleChangelog,
+            BundleChangelog::outputDir,
         )
     }
 }
