@@ -18,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.hxreborn.biometricapplock.ui.component.SectionCard
@@ -52,6 +54,17 @@ fun PreferenceRow(
     position: SectionPosition = SectionPosition.Single,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
+) = PreferenceRow(rememberVectorPainter(icon), title, summary, modifier, position, onClick, trailing)
+
+@Composable
+fun PreferenceRow(
+    icon: Painter,
+    title: String,
+    summary: String?,
+    modifier: Modifier = Modifier,
+    position: SectionPosition = SectionPosition.Single,
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
 ) {
     SectionCard(modifier = modifier, position = position) {
         PreferenceRowContent(
@@ -66,7 +79,7 @@ fun PreferenceRow(
 
 @Composable
 fun PreferenceRowContent(
-    icon: ImageVector,
+    icon: Painter,
     title: String,
     summary: String?,
     onClick: (() -> Unit)? = null,
@@ -87,7 +100,7 @@ fun PreferenceRowContent(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
+            painter = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(Tokens.SettingsIconSize),
