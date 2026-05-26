@@ -145,6 +145,7 @@ fun MainNavDisplay(
     backStack: NavBackStack<NavKey>,
     viewModel: ScopeViewModel,
     contentPadding: PaddingValues,
+    onShowUpdateSheet: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val slideInDistance = with(LocalDensity.current) { Tokens.NavSlideDistance.roundToPx() }
@@ -214,6 +215,7 @@ fun MainNavDisplay(
                 entry<Screen.Settings> {
                     SettingsScreen(
                         onNavigateToAbout = dropUnlessResumed { backStack.add(Screen.About) },
+                        onShowUpdateSheet = onShowUpdateSheet,
                         contentPadding = contentPadding,
                     )
                 }

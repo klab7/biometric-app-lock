@@ -90,6 +90,7 @@ fun MainScaffold(viewModel: ScopeViewModel) {
             backStack = backStack,
             viewModel = viewModel,
             contentPadding = contentPadding,
+            onShowUpdateSheet = { showUpdateSheet = true },
         )
     }
 }

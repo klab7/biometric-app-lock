@@ -50,7 +50,6 @@ import eu.hxreborn.biometricapplock.R
 import eu.hxreborn.biometricapplock.prefs.AppPrefs
 import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.prefs.ThemeMode
-import eu.hxreborn.biometricapplock.ui.component.ChangelogSheet
 import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
 import eu.hxreborn.biometricapplock.ui.component.FeatureSheetItem
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
@@ -68,6 +67,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onNavigateToAbout: () -> Unit,
+    onShowUpdateSheet: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val context = LocalContext.current
@@ -78,7 +78,6 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showRelockDialog by remember { mutableStateOf(false) }
     var showWhatsNew by remember { mutableStateOf(false) }
-    var showUpdateChangelog by remember { mutableStateOf(false) }
 
     if (showThemeDialog) {
         ThemeDialog(
@@ -125,10 +124,6 @@ fun SettingsScreen(
             versionLabel = BuildConfig.VERSION_NAME,
             onDismiss = { showWhatsNew = false },
         )
-    }
-
-    if (showUpdateChangelog) {
-        ChangelogSheet(onDismiss = { showUpdateChangelog = false })
     }
 
     val showDotIndicator =
@@ -241,7 +236,7 @@ fun SettingsScreen(
                     summary = stringResource(R.string.updates_check_summary),
                     position = SectionPosition.Top,
                     onClick = {
-                        showUpdateChangelog = true
+                        onShowUpdateSheet()
                         coroutineScope.launch { App.updateRepository.checkNow() }
                     },
                     trailing = {
