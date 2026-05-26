@@ -71,7 +71,7 @@
 
     <string name="settings_lock">Lock &amp; privacy</string>
     <string name="settings_relock_delay_title">Re-lock delay</string>
-    <string name="settings_relock_delay_summary">How long an app stays unlocked after you leave it</string>
+    <string name="settings_relock_delay_summary">How long to wait before locking an app again</string>
 
     <string name="settings_disable_flag_secure_title">Disable FLAG_SECURE after unlock</string>
     <string name="settings_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication</string>
@@ -110,12 +110,12 @@
 
     <string name="app_detail_override_title">Override global settings</string>
     <string name="app_detail_relock_delay_title">Re-lock delay</string>
-    <string name="app_detail_relock_delay_immediate">Immediate</string>
-    <string name="app_detail_relock_delay_30s">30 seconds</string>
-    <string name="app_detail_relock_delay_1m">1 minute</string>
-    <string name="app_detail_relock_delay_5m">5 minutes</string>
-    <string name="app_detail_relock_delay_30m">30 minutes</string>
-    <string name="app_detail_relock_delay_never">Until process killed</string>
+    <string name="app_detail_relock_delay_immediate">Instantly</string>
+    <string name="app_detail_relock_delay_30s">After 30 seconds</string>
+    <string name="app_detail_relock_delay_1m">After 1 minute</string>
+    <string name="app_detail_relock_delay_5m">After 5 minutes</string>
+    <string name="app_detail_relock_delay_30m">After 30 minutes</string>
+    <string name="app_detail_relock_delay_never">Never</string>
 
 
     <string name="app_detail_disable_flag_secure_title">Disable FLAG_SECURE after unlock</string>
