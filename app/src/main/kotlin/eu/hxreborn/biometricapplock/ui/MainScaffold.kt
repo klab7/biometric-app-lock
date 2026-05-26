@@ -23,6 +23,7 @@ import eu.hxreborn.biometricapplock.ui.navigation.Screen
 import eu.hxreborn.biometricapplock.ui.navigation.bottomNavItems
 import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
 import eu.hxreborn.biometricapplock.updates.UpdateState
+import kotlinx.coroutines.delay
 
 @Composable
 fun MainScaffold(viewModel: ScopeViewModel) {
@@ -48,6 +49,7 @@ fun MainScaffold(viewModel: ScopeViewModel) {
             state.latestVersion != dismissed &&
             shownForVersion != state.latestVersion
         ) {
+            delay(800L)
             shownForVersion = state.latestVersion
             showUpdateSheet = true
         }
