@@ -1,6 +1,26 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "entries": [
+    {
+      "type": "perf",
+      "title": "use ETag conditional requests for GitHub API calls",
+      "description": "304 Not Modified responses don't count against the rate limit, so repeated update checks are essentially free.",
+      "version": "0.8.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/01700afe9184c4ff6690f95248a3f1251dee154c",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "bundle changelog as APK asset for WhatsNew",
+      "description": "WhatsNew reads from a build-time bundled asset instead of fetching remotely, so it always has entries for the installed version. The remote CHANGELOG.json now keeps the last 5 releases and ChangelogSheet filters by the target version.",
+      "version": "0.8.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/ffece69292316c3bd461c9ef6a64ebfcdbf119e8",
+      "scope": "ui",
+      "breaking": false
+    },
     {
       "type": "feat",
       "title": "enable auto-check updates by default",
@@ -28,6 +48,96 @@
       "version": "0.7.0",
       "date": "2026-05-26",
       "url": "https://github.com/hxreborn/biometric-app-lock/commit/6ec91fbfd61486743a467e2e442bb207d6a0871d",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "auto-show update sheet when a new version is found",
+      "description": "Auto-check now fires on every app foreground via repeatOnLifecycle. When it finds a newer version, the update sheet opens automatically and the Settings tab shows a badge.",
+      "version": "0.6.0",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/fdfe125ff1bcd11c5443ff35278b16139d41d046",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "refactor",
+      "title": "overhaul changelog/update sheet and state model",
+      "description": "Error and rate-limit states render a centered cookie badge instead of a flat card.",
+      "version": "0.6.0",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/6d2eaca1d78b8f7103d608864fc3425953e1b48a",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "replace changelog type labels with M3 color-coded chips",
+      "description": "Each entry now shows a squared, uppercase chip tinted by change type using Material You roles, plus a separate muted scope chip.",
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/009b515ecc3eecbcb644da314d6816d529fdb7f8",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "redesign update sheet with cookie badge and morph transition",
+      "description": "Loading spinner crossfades into a cookie-shaped badge when the check finishes, button stays disabled during fetch, and the sheet title is now consistent across states.",
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/a129468bb3a15e1b795c361742545124f2910e50",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "hide changelog items in update sheet when up to date",
+      "description": null,
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/803d568609ffd7393941306ae7cdf7825b868ee6",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "animate floating toolbar visibility on navigation",
+      "description": null,
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/214c06fad3306fd968030da38222cff265bca504",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "refactor",
+      "title": "add experimental notice and fix status card wording",
+      "description": null,
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/85f041e0b9828d235f49f9161ab64a3010bf2e80",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "remove broken Binder UID check from BiometricAuthActivity",
+      "description": "Binder.getCallingUid() in onCreate returns the process's own UID, not the launcher's, so it always rejected the launch. The auth token is the real security gate.",
+      "version": "0.5.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/00d2c94d478f466e9feb33b231342804be246c66",
+      "scope": "auth",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "load What's New entries from CHANGELOG.json",
+      "description": "Hardcoded feature items replaced with live changelog data filtered to the current version.",
+      "version": "0.4.0-test",
+      "date": "2026-05-25",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/8212ea2e51f07e21b612dfe1c85126a5cf279f28",
       "scope": "ui",
       "breaking": false
     }
