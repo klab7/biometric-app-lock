@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 
 private const val TAG = "BiometricAppLock"
 private const val REPO = "hxreborn/biometric-app-lock"
@@ -63,15 +63,7 @@ class UpdateRepository(
     init {
         val cachedRelease = Prefs.LAST_RELEASE_JSON.read(prefs)
         if (cachedRelease.isNotEmpty()) {
-            runCatching {
-                val obj = JSONObject(cachedRelease)
-                val tag = obj.getString("tag_name").trimStart('v', 'V')
-                val url = obj.getString("html_url")
-                val current = BuildConfig.VERSION_NAME
-                if (isNewer(tag, current)) {
-                    _cachedAvailable.value = UpdateState.Available(current, tag, url)
-                }
-            }
+            runCatching { compareRelease(cachedRelease) }
         }
         val cachedJson = Prefs.LAST_CHANGELOG_JSON.read(prefs)
         if (cachedJson.isNotEmpty()) {
@@ -147,6 +139,19 @@ class UpdateRepository(
             }
         }
 
+    private fun compareRelease(body: String): UpdateState {
+        val obj = JSONObject(body)
+        val tag = obj.getString("tag_name").trimStart('v', 'V')
+        val url = obj.getString("html_url")
+        val current = BuildConfig.VERSION_NAME
+        return if (isNewer(tag, current)) {
+            UpdateState.Available(current, tag, url).also { _cachedAvailable.value = it }
+        } else {
+            _cachedAvailable.value = null
+            UpdateState.UpToDate(current)
+        }
+    }
+
     private fun fetchRelease(): UpdateState =
         try {
             val etag = Prefs.RELEASE_ETAG.read(prefs)
@@ -157,7 +162,14 @@ class UpdateRepository(
             val isSecondaryRateLimit = code == 429
             when {
                 code == 304 -> {
-                    cachedReleaseState() ?: UpdateState.UpToDate(BuildConfig.VERSION_NAME)
+                    val cached = Prefs.LAST_RELEASE_JSON.read(prefs)
+                    if (cached.isNotEmpty()) {
+                        compareRelease(
+                            cached,
+                        )
+                    } else {
+                        UpdateState.UpToDate(BuildConfig.VERSION_NAME)
+                    }
                 }
 
                 isPrimaryRateLimit -> {
@@ -188,7 +200,12 @@ class UpdateRepository(
 
                 else -> {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    parseReleaseBody(body, conn.getHeaderField("ETag"))
+                    prefs.edit {
+                        Prefs.LAST_RELEASE_JSON.write(this, body)
+                        val newEtag = conn.getHeaderField("ETag")
+                        if (newEtag != null) Prefs.RELEASE_ETAG.write(this, newEtag)
+                    }
+                    compareRelease(body)
                 }
             }
         } catch (e: Exception) {
@@ -196,52 +213,11 @@ class UpdateRepository(
             UpdateState.Failed(FailureCause.Network)
         }
 
-    private fun cachedReleaseState(): UpdateState? {
-        val body = Prefs.LAST_RELEASE_JSON.read(prefs)
-        if (body.isEmpty()) return null
-        return runCatching {
-            val obj = JSONObject(body)
-            val tag = obj.getString("tag_name").trimStart('v', 'V')
-            val url = obj.getString("html_url")
-            val current = BuildConfig.VERSION_NAME
-            if (isNewer(tag, current)) {
-                UpdateState.Available(current, tag, url).also { _cachedAvailable.value = it }
-            } else {
-                _cachedAvailable.value = null
-                UpdateState.UpToDate(current)
-            }
-        }.getOrNull()
-    }
-
-    private fun parseReleaseBody(
-        body: String,
-        newEtag: String? = null,
-    ): UpdateState =
-        try {
-            val obj = JSONObject(body)
-            val tag = obj.getString("tag_name").trimStart('v', 'V')
-            val releaseUrl = obj.getString("html_url")
-            val current = BuildConfig.VERSION_NAME
-            prefs.edit {
-                Prefs.LAST_RELEASE_JSON.write(this, body)
-                if (newEtag != null) Prefs.RELEASE_ETAG.write(this, newEtag)
-            }
-            if (isNewer(tag, current)) {
-                UpdateState.Available(current, tag, releaseUrl).also { _cachedAvailable.value = it }
-            } else {
-                _cachedAvailable.value = null
-                UpdateState.UpToDate(current)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "release parse failed: ${e.message}")
-            UpdateState.Failed(FailureCause.Parse)
-        }
-
     private fun openConnection(
         urlString: String,
         etag: String = "",
     ): HttpURLConnection =
-        (URL(urlString).openConnection() as HttpURLConnection).apply {
+        (URI(urlString).toURL().openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
