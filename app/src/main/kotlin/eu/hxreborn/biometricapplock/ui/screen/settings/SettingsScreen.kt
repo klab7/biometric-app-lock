@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,6 +100,7 @@ fun SettingsScreen(
     }
 
     if (showWhatsNew) {
+        val uriHandler = LocalUriHandler.current
         val whatsNewItems =
             App.updateRepository.bundledChangelog
                 .filter { it.version == BuildConfig.VERSION_NAME }
@@ -110,6 +112,7 @@ fun SettingsScreen(
                         changeType = type,
                         title = entry.title,
                         body = entry.description,
+                        onClick = entry.url?.let { url -> { uriHandler.openUri(url) } },
                     )
                 }
 
