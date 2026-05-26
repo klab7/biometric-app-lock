@@ -33,4 +33,4 @@ A reboot is required after install or update because framework hooks only load a
 
 ## License
 
-[![GPLv3](https://img.shields.io/badge/LICENSE-GPL_v3-%23A42E2B?style=for-the-badge&logo=gnu&logoColor=white&logoPosition=right)](LICENSE)
+[![GPLv3](https://img.shields.io/badge/LICENSE-GPLv3-%23A42E2B?style=for-the-badge&logo=gnu&logoColor=white&logoPosition=right)](LICENSE)
