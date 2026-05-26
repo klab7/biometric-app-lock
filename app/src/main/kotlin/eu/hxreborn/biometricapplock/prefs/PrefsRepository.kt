@@ -29,7 +29,7 @@ data class AppPrefs(
                 verbose = false,
                 relockDelaySeconds = 0,
                 disableFlagSecure = false,
-                autoCheckUpdate = false,
+                autoCheckUpdate = true,
                 lastDismissedAvailableVersion = "",
             )
     }
