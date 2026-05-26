@@ -91,6 +91,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -618,7 +619,12 @@ fun AppListScreen(
                         Modifier
                             .fillMaxSize()
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .scrollbar(lazyListState, scrollbarColor, scrollbarAlpha),
+                            .scrollbar(
+                                lazyListState,
+                                scrollbarColor,
+                                scrollbarAlpha,
+                                contentPadding.calculateBottomPadding() + Tokens.SpacingLg,
+                            ),
                     contentPadding =
                         PaddingValues(
                             top = Tokens.SpacingSm,
@@ -703,14 +709,16 @@ private fun Modifier.scrollbar(
     state: LazyListState,
     color: Color,
     alpha: Float,
+    bottomPadding: Dp = 0.dp,
 ) = drawWithContent {
     drawContent()
     if (alpha == 0f) return@drawWithContent
     val info = state.layoutInfo
     if (info.totalItemsCount == 0 || info.visibleItemsInfo.size >= info.totalItemsCount) return@drawWithContent
 
+    val trackHeight = size.height - bottomPadding.toPx()
     val thumbRatio = info.visibleItemsInfo.size.toFloat() / info.totalItemsCount
-    val thumbHeight = (thumbRatio * size.height).coerceAtLeast(24.dp.toPx())
+    val thumbHeight = (thumbRatio * trackHeight).coerceAtLeast(24.dp.toPx())
     val avgItemHeight =
         info.visibleItemsInfo
             .map { it.size }
@@ -719,7 +727,7 @@ private fun Modifier.scrollbar(
             .coerceAtLeast(1f)
     val scrolled = state.firstVisibleItemIndex + state.firstVisibleItemScrollOffset / avgItemHeight
     val maxScroll = (info.totalItemsCount - info.visibleItemsInfo.size).coerceAtLeast(1).toFloat()
-    val thumbTop = (scrolled / maxScroll).coerceIn(0f, 1f) * (size.height - thumbHeight)
+    val thumbTop = (scrolled / maxScroll).coerceIn(0f, 1f) * (trackHeight - thumbHeight)
     val width = 4.dp.toPx()
 
     drawRoundRect(
