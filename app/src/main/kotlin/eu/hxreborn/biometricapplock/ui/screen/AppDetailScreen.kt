@@ -163,7 +163,7 @@ fun AppDetailScreen(
                 )
             }
 
-            item { SettingsSectionHeader(title = stringResource(R.string.app_detail_section_lock)) }
+            item { SettingsSectionHeader(title = stringResource(R.string.settings_lock)) }
 
             item {
                 PreferenceRow(

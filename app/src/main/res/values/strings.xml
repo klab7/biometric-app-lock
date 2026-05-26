@@ -107,7 +107,7 @@
     <string name="about_section_release">Release</string>
 
     <string name="app_detail_title">App details</string>
-    <string name="app_detail_section_lock">Lock</string>
+
     <string name="app_detail_override_title">Override global settings</string>
     <string name="app_detail_relock_delay_title">Re-lock delay</string>
     <string name="app_detail_relock_delay_immediate">Immediate</string>
@@ -117,7 +117,7 @@
     <string name="app_detail_relock_delay_30m">30 minutes</string>
     <string name="app_detail_relock_delay_never">Until process killed</string>
 
-    <string name="app_detail_section_secure_display">Secure display</string>
+
     <string name="app_detail_disable_flag_secure_title">Disable FLAG_SECURE after unlock</string>
     <string name="app_detail_disable_flag_secure_summary">Allows screenshots, screen recording, and the recents screen preview after successful biometric authentication</string>
 
