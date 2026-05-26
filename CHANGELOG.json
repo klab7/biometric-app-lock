@@ -1,6 +1,66 @@
 {
-  "version": "0.8.1",
+  "version": "0.9.0",
   "entries": [
+    {
+      "type": "fix",
+      "title": "scrollbar overlapping navigation bar on app list",
+      "description": null,
+      "version": "0.9.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/d583f5e03f3b635b9238b0afc0731e99659180d5",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "feat",
+      "title": "toggle between floating and classic navigation bar",
+      "description": null,
+      "version": "0.9.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/3dfd1c242d85dac4fe16ab57da3e6c584fea9ce2",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "wire commit URLs in WhatsNew entries",
+      "description": null,
+      "version": "0.9.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/bfcdcdba05066ebdbcd7457cf8e152888e970d6b",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "refactor",
+      "title": "remove verbose logging toggle",
+      "description": "Debug log calls happen inside hook callbacks that fire under mGlobalLock, where reading prefs would deadlock.",
+      "version": "0.9.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/ef0b6e8e3ab5a788b4a812cd1b3b6345f55428e7",
+      "scope": null,
+      "breaking": false
+    },
+    {
+      "type": "refactor",
+      "title": "clarify relock delay labels",
+      "description": null,
+      "version": "0.9.0",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/d8ecf03c6f3bd69f94db3ef51ea9618036de35f1",
+      "scope": "ui",
+      "breaking": false
+    },
+    {
+      "type": "fix",
+      "title": "race condition in skip-version check and polish changelog sheet",
+      "description": "Read dismissed version synchronously from SharedPreferences instead of the reactive Flow to prevent the auto-popup from ignoring a skipped version on cold start. Also pins action buttons outside the scroll area, removes tap-to-collapse on descriptions, and moves commit links to long-press.",
+      "version": "0.8.1",
+      "date": "2026-05-26",
+      "url": "https://github.com/hxreborn/biometric-app-lock/commit/ae36e8d45a22358782bd2ba6eedbce63c07bbc6e",
+      "scope": "ui",
+      "breaking": false
+    },
     {
       "type": "refactor",
       "title": "polish update sheet transitions and interactions",
@@ -139,16 +199,6 @@
       "date": "2026-05-25",
       "url": "https://github.com/hxreborn/biometric-app-lock/commit/00d2c94d478f466e9feb33b231342804be246c66",
       "scope": "auth",
-      "breaking": false
-    },
-    {
-      "type": "fix",
-      "title": "load What's New entries from CHANGELOG.json",
-      "description": "Hardcoded feature items replaced with live changelog data filtered to the current version.",
-      "version": "0.4.0-test",
-      "date": "2026-05-25",
-      "url": "https://github.com/hxreborn/biometric-app-lock/commit/8212ea2e51f07e21b612dfe1c85126a5cf279f28",
-      "scope": "ui",
       "breaking": false
     }
   ]
