@@ -59,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -110,6 +111,7 @@ fun WhatsNewSheet(
     val haptics = LocalHapticFeedback.current
     val title = stringResource(state.titleRes)
 
+    val scope = rememberCoroutineScope()
     val contentAlpha = remember { Animatable(0f) }
     val contentOffsetY = remember { Animatable(24f) }
 
@@ -121,7 +123,10 @@ fun WhatsNewSheet(
 
     val dismiss: () -> Unit = {
         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-        onDismiss()
+        scope.launch {
+            sheetState.hide()
+            onDismiss()
+        }
     }
 
     ModalBottomSheet(
