@@ -1,4 +1,8 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(
+    ExperimentalFoundationApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+)
 
 package eu.hxreborn.biometricapplock.ui.component
 
@@ -17,7 +21,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -234,52 +240,173 @@ private fun SheetBody(
         when (state) {
             UpdateSheetState.Checking,
             is UpdateSheetState.UpToDate,
+            is UpdateSheetState.Failed,
+            is UpdateSheetState.RateLimited,
             -> {
-                val resolved = state is UpdateSheetState.UpToDate
+                val resolved = state !is UpdateSheetState.Checking
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = Tokens.EmptyStatePadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Tokens.SheetSectionSpacing),
                 ) {
                     AnimatedContent(
-                        targetState = resolved,
+                        targetState = state,
+                        contentKey = { it::class },
                         transitionSpec = {
                             (fadeIn(tween(600)) + scaleIn(tween(600), initialScale = 0.6f))
                                 .togetherWith(fadeOut(tween(400)) + scaleOut(tween(400), targetScale = 0.6f))
                         },
                         label = "updateBadge",
-                    ) { done ->
+                    ) { target ->
                         Box(
                             modifier = Modifier.size(Tokens.UpToDateBadgeSize),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (!done) {
-                                LoadingIndicator(modifier = Modifier.size(Tokens.UpToDateBadgeSize))
-                            } else {
-                                SoftBlobBadge(
-                                    size = Tokens.UpToDateBadgeSize,
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Download,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
+                            when (target) {
+                                UpdateSheetState.Checking -> {
+                                    LoadingIndicator(modifier = Modifier.size(Tokens.UpToDateBadgeSize))
                                 }
+
+                                is UpdateSheetState.UpToDate -> {
+                                    SoftBlobBadge(
+                                        size = Tokens.UpToDateBadgeSize,
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Download,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                    }
+                                }
+
+                                is UpdateSheetState.Failed -> {
+                                    val icon =
+                                        when (target.cause) {
+                                            FailureCause.Offline, FailureCause.ServiceUnavailable -> {
+                                                Icons.Outlined.CloudOff
+                                            }
+
+                                            FailureCause.Network, FailureCause.Parse -> {
+                                                Icons.Outlined.ErrorOutline
+                                            }
+                                        }
+                                    SoftBlobBadge(
+                                        size = Tokens.UpToDateBadgeSize,
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                    }
+                                }
+
+                                is UpdateSheetState.RateLimited -> {
+                                    SoftBlobBadge(
+                                        size = Tokens.UpToDateBadgeSize,
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.HourglassEmpty,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        )
+                                    }
+                                }
+
+                                else -> {}
                             }
                         }
                     }
-                    Text(
-                        text = stringResource(R.string.updates_sheet_up_to_date_callout),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color =
-                            if (resolved) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                Color.Transparent
-                            },
-                    )
+                    AnimatedContent(
+                        targetState = state,
+                        contentKey = { it::class },
+                        transitionSpec = {
+                            fadeIn(tween(400)).togetherWith(fadeOut(tween(300)))
+                        },
+                        label = "statusText",
+                    ) { target ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(Tokens.SpacingSm),
+                        ) {
+                            val text =
+                                when (target) {
+                                    UpdateSheetState.Checking -> {
+                                        ""
+                                    }
+
+                                    is UpdateSheetState.UpToDate -> {
+                                        stringResource(R.string.updates_sheet_up_to_date_callout)
+                                    }
+
+                                    is UpdateSheetState.Failed -> {
+                                        when (target.cause) {
+                                            FailureCause.Offline -> {
+                                                stringResource(R.string.updates_dialog_failed_offline)
+                                            }
+
+                                            FailureCause.ServiceUnavailable -> {
+                                                stringResource(R.string.updates_dialog_failed_service_unavailable)
+                                            }
+
+                                            FailureCause.Network, FailureCause.Parse -> {
+                                                stringResource(R.string.updates_dialog_failed_network)
+                                            }
+                                        }
+                                    }
+
+                                    is UpdateSheetState.RateLimited -> {
+                                        if (target.resetAtEpochMs != null) {
+                                            stringResource(
+                                                R.string.updates_dialog_rate_limited_body,
+                                                DateUtils
+                                                    .getRelativeTimeSpanString(
+                                                        target.resetAtEpochMs,
+                                                        System.currentTimeMillis(),
+                                                        DateUtils.MINUTE_IN_MILLIS,
+                                                    ).toString(),
+                                            )
+                                        } else {
+                                            stringResource(R.string.updates_dialog_rate_limited_body_unknown)
+                                        }
+                                    }
+
+                                    else -> {
+                                        ""
+                                    }
+                                }
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color =
+                                    if (resolved) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                textAlign = TextAlign.Center,
+                            )
+                            if (target is UpdateSheetState.RateLimited) {
+                                Text(
+                                    text = stringResource(R.string.updates_rate_limit_context),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+                    }
+                }
+                if (state is UpdateSheetState.Failed && state.cachedFallback != null && items.isNotEmpty()) {
+                    CachedCaption()
+                    ItemList(items)
                 }
             }
 
@@ -300,65 +427,6 @@ private fun SheetBody(
                     )
                 }
                 ItemList(items)
-            }
-
-            is UpdateSheetState.Failed -> {
-                val (icon, text) =
-                    when (state.cause) {
-                        FailureCause.Offline -> {
-                            Icons.Outlined.CloudOff to stringResource(R.string.updates_dialog_failed_offline)
-                        }
-
-                        FailureCause.ServiceUnavailable -> {
-                            Icons.Outlined.CloudOff to
-                                stringResource(R.string.updates_dialog_failed_service_unavailable)
-                        }
-
-                        FailureCause.Network, FailureCause.Parse -> {
-                            Icons.Outlined.ErrorOutline to
-                                stringResource(R.string.updates_dialog_failed_network)
-                        }
-                    }
-                CenteredStatusBadge(
-                    icon = icon,
-                    text = text,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                )
-                if (state.cachedFallback != null && items.isNotEmpty()) {
-                    CachedCaption()
-                    ItemList(items)
-                }
-            }
-
-            is UpdateSheetState.RateLimited -> {
-                val body =
-                    if (state.resetAtEpochMs != null) {
-                        stringResource(
-                            R.string.updates_dialog_rate_limited_body,
-                            DateUtils
-                                .getRelativeTimeSpanString(
-                                    state.resetAtEpochMs,
-                                    System.currentTimeMillis(),
-                                    DateUtils.MINUTE_IN_MILLIS,
-                                ).toString(),
-                        )
-                    } else {
-                        stringResource(R.string.updates_dialog_rate_limited_body_unknown)
-                    }
-                CenteredStatusBadge(
-                    icon = Icons.Outlined.HourglassEmpty,
-                    text = body,
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-                Text(
-                    text = stringResource(R.string.updates_rate_limit_context),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
 
             UpdateSheetState.WhatsNew -> {
@@ -522,7 +590,7 @@ private fun TypeSection(
 private fun ChangelogEntryRow(item: FeatureSheetItem) {
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val hasBody = !item.body.isNullOrBlank()
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) }
     val titleText =
         buildAnnotatedString {
             append(item.title)
@@ -532,20 +600,33 @@ private fun ChangelogEntryRow(item: FeatureSheetItem) {
                 }
             }
         }
+    val haptics = LocalHapticFeedback.current
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .then(
-                    when {
-                        hasBody -> Modifier.clickable { expanded = !expanded }
-                        item.onClick != null -> Modifier.clickable(onClick = item.onClick)
-                        else -> Modifier
-                    },
+                    if (hasBody) Modifier.clickable { expanded = !expanded } else Modifier,
                 ).padding(vertical = Tokens.SpacingXs),
         verticalArrangement = Arrangement.spacedBy(Tokens.SpacingXs),
     ) {
-        Text(text = titleText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = titleText,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier =
+                if (item.onClick != null) {
+                    Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            item.onClick.invoke()
+                        },
+                    )
+                } else {
+                    Modifier
+                },
+        )
         AnimatedVisibility(
             visible = expanded && hasBody,
             enter = expandVertically(spring(stiffness = Spring.StiffnessMediumLow)),
@@ -572,38 +653,6 @@ private fun CachedCaption() {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-}
-
-@Composable
-private fun CenteredStatusBadge(
-    icon: ImageVector,
-    text: String,
-    containerColor: Color,
-    contentColor: Color,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Tokens.EmptyStatePadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Tokens.SheetSectionSpacing),
-    ) {
-        SoftBlobBadge(
-            size = Tokens.UpToDateBadgeSize,
-            containerColor = containerColor,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(Tokens.UpToDateBadgeIconSize),
-                tint = contentColor,
-            )
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
 }
 
 @Composable
@@ -665,7 +714,7 @@ private fun SheetActions(
                 },
             )
             SecondaryAction(
-                label = stringResource(R.string.updates_sheet_later),
+                label = stringResource(R.string.updates_sheet_skip_version),
                 onClick = {
                     onLater(state.latestVersion)
                     onDismiss()

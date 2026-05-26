@@ -33,18 +33,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun ChangelogSheet(onDismiss: () -> Unit) {
+fun ChangelogSheet(
+    onDismiss: () -> Unit,
+    showCheckingState: Boolean = true,
+) {
     val uriHandler = LocalUriHandler.current
     val coroutineScope = rememberCoroutineScope()
     val cachedEntries by App.updateRepository.cachedChangelog.collectAsStateWithLifecycle()
     val cachedAvailable by App.updateRepository.cachedAvailable.collectAsStateWithLifecycle()
     val updateState by App.updateRepository.currentState.collectAsStateWithLifecycle()
-    var minDelayPassed by remember { mutableStateOf(false) }
+    var minDelayPassed by remember { mutableStateOf(!showCheckingState) }
 
     LaunchedEffect(Unit) {
         App.updateRepository.fetchChangelog()
-        delay(1000L)
-        minDelayPassed = true
+        if (showCheckingState) {
+            delay(1000L)
+            minDelayPassed = true
+        }
     }
 
     val latestVersionForMatch = cachedAvailable?.latestVersion ?: BuildConfig.VERSION_NAME

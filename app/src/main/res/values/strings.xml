@@ -178,7 +178,7 @@
     <string name="updates_sheet_up_to_date_callout">You\'re on the latest version</string>
     <string name="updates_sheet_version_delta">v%1$s → v%2$s</string>
     <string name="updates_sheet_download">Download</string>
-    <string name="updates_sheet_later">Later</string>
+    <string name="updates_sheet_skip_version">Skip this version</string>
     <string name="updates_sheet_notes_unavailable">Release notes unavailable for this version</string>
     <string name="updates_sheet_cached_caption">Showing last known result</string>
     <plurals name="updates_sheet_change_count">

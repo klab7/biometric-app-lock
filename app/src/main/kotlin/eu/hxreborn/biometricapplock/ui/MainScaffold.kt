@@ -51,7 +51,10 @@ fun MainScaffold(viewModel: ScopeViewModel) {
     }
 
     if (showUpdateSheet) {
-        ChangelogSheet(onDismiss = { showUpdateSheet = false })
+        ChangelogSheet(
+            onDismiss = { showUpdateSheet = false },
+            showCheckingState = false,
+        )
     }
 
     Scaffold(
