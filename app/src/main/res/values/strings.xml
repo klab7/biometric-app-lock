@@ -69,7 +69,7 @@
     <string name="settings_floating_nav_bar_summary">Floating pill instead of classic tab bar</string>
 
     <string name="settings_hide_launcher">Hide from launcher</string>
-    <string name="settings_hide_launcher_summary">Open from Xposed manager only</string>
+    <string name="settings_hide_launcher_summary">Hides app from launcher. You can still open it from Xposed manager</string>
 
     <string name="settings_lock">Lock &amp; privacy</string>
     <string name="settings_relock_delay_title">Re-lock delay</string>
