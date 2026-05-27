@@ -3,6 +3,7 @@ package eu.hxreborn.biometricapplock.hook
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Handler
 import android.os.SystemClock
 import eu.hxreborn.biometricapplock.BiometricAuthActivity
@@ -97,7 +98,8 @@ private fun applyRedirect(
             resolvedInfo,
             startFlags,
             null,
-        )
+        ) as? ActivityInfo
+            ?: error("BiometricAuthActivity not resolvable — PackageManager not ready")
 
     reflection.intentField.set(interceptor, authIntent)
     reflection.resolvedInfoField.set(interceptor, resolvedInfo)

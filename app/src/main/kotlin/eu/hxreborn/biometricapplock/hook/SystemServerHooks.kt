@@ -45,6 +45,7 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
             val result = chain.proceed()
             if (result == true) return@intercept true
             if (packageName == null || packageName !in lockedPackages) return@intercept false
+            if (intent?.hasCategory(Intent.CATEGORY_HOME) == true) return@intercept false
             if (packageName in unlockedPackages) {
                 Logger.debug { "intercept pass pkg=$packageName comp=${activityInfo.name}" }
                 return@intercept false
