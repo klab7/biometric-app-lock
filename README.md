@@ -1,4 +1,11 @@
-![Biometric App Lock](https://socialify.git.ci/hxreborn/biometric-app-lock/image?description=1&font=Inter&forks=1&issues=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2Fhxreborn%2Fbiometric-app-lock%2Frefs%2Fheads%2Fmain%2Fassets%2Ficon.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/banner_dark.png">
+    <img src="assets/banner_light.png" alt="Biometric App Lock">
+  </picture>
+</p>
+
+---
 
 <p align="center">
   Xposed module that intercepts the launches of a user-defined list of apps at the System Framework level. Those activities are never created until you authenticate via fingerprint or face unlock.
@@ -9,9 +16,6 @@
   <img src="https://img.shields.io/badge/libxposed-API_101-ff69b4?style=for-the-badge" alt="libxposed API 101">
   <img src="https://img.shields.io/github/downloads/hxreborn/biometric-app-lock/total?style=for-the-badge&logo=github&label=Downloads" alt="Downloads">
 </p>
-
-> [!WARNING]
-> Pre-1.0 releases (0.x.x) and any build tagged `-test` are experimental.
 
 > [!NOTE]
 > For stock AOSP and Pixel ROMs. Other ROMs may work but are untested, use at your own risk. If you're on HyperOS, OxygenOS or ColorOS, your ROM already ships a native app lock and you probably don't need this.
