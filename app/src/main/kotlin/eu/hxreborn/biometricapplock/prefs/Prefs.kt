@@ -5,7 +5,6 @@ object Prefs {
 
     val DARK_THEME_CONFIG = StringPref("dark_theme_config", ThemeMode.FOLLOW_SYSTEM.prefValue)
     val USE_DYNAMIC_COLOR = BoolPref("use_dynamic_color", true)
-    val LAUNCHER_HIDDEN = BoolPref("launcher_hidden", false)
     val LOCKED_PACKAGES = StringPref("locked_packages", "")
     val RELOCK_DELAY_SECONDS = IntPref("relock_delay_seconds", 0)
     val DISABLE_FLAG_SECURE = BoolPref("disable_flag_secure", false)

@@ -8,6 +8,15 @@ import eu.hxreborn.biometricapplock.BuildConfig
 object LauncherIconHelper {
     private const val ALIAS_NAME = "${BuildConfig.APPLICATION_ID}.LauncherAlias"
 
+    fun isLauncherIconVisible(context: Context): Boolean {
+        val info =
+            context.packageManager.getPackageInfo(
+                BuildConfig.APPLICATION_ID,
+                PackageManager.GET_ACTIVITIES,
+            )
+        return info.activities?.any { it.targetActivity != null } == true
+    }
+
     fun setLauncherIconVisible(
         context: Context,
         visible: Boolean,

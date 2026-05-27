@@ -78,6 +78,7 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showRelockDialog by remember { mutableStateOf(false) }
     var showWhatsNew by remember { mutableStateOf(false) }
+    var launcherIconHidden by remember { mutableStateOf(!LauncherIconHelper.isLauncherIconVisible(context)) }
 
     if (showThemeDialog) {
         ThemeDialog(
@@ -178,12 +179,12 @@ fun SettingsScreen(
                     summary = stringResource(R.string.settings_hide_launcher_summary),
                     position = SectionPosition.Bottom,
                     onClick = {
-                        val hidden = !prefs.launcherHidden
+                        val hidden = !launcherIconHidden
                         LauncherIconHelper.setLauncherIconVisible(context, !hidden)
-                        App.prefsRepository.save(Prefs.LAUNCHER_HIDDEN, hidden)
+                        launcherIconHidden = hidden
                     },
                     trailing = {
-                        LockSwitch(checked = prefs.launcherHidden, onCheckedChange = null)
+                        LockSwitch(checked = launcherIconHidden, onCheckedChange = null)
                     },
                 )
             }
