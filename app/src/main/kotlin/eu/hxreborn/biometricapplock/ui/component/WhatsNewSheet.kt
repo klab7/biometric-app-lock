@@ -57,6 +57,7 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -66,6 +67,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -118,6 +122,9 @@ fun WhatsNewSheet(
     val scope = rememberCoroutineScope()
     val contentAlpha = remember { Animatable(0f) }
     val contentOffsetY = remember { Animatable(24f) }
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val contentHeight = remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
 
     LaunchedEffect(Unit) {
         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -136,6 +143,7 @@ fun WhatsNewSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        sheetGesturesEnabled = contentHeight.value < screenHeight / 2,
     ) {
         Column(
             modifier =
@@ -165,7 +173,10 @@ fun WhatsNewSheet(
                 modifier =
                     Modifier
                         .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(rememberScrollState())
+                        .onSizeChanged { size ->
+                            contentHeight.value = with(density) { size.height.toDp() }
+                        },
                 verticalArrangement = Arrangement.spacedBy(Tokens.SheetSectionSpacing),
             ) {
                 SheetHeader(versionLabel = versionLabel, title = title, itemCount = itemCount)
