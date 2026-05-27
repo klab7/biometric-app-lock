@@ -167,8 +167,14 @@ private fun XposedModule.hookSnapshotProtection(classLoader: ClassLoader) {
             reflection?.activityRecordPackageNameField ?: error("reflection not ready")
 
         hook(method).intercept { chain ->
-            val packageName = packageNameField.get(chain.thisObject) as? String
-            if (packageName in lockedPackages && packageName !in unlockedPackages) {
+            val pkg = packageNameField.get(chain.thisObject) as? String
+            if (pkg != null && pkg in lockedPackages) {
+                // Show real content only when FLAG_SECURE is disabled AND the app is unlocked
+                if (isFlagSecureDisabled(pkg) &&
+                    pkg in unlockedPackages
+                ) {
+                    return@intercept chain.proceed()
+                }
                 return@intercept true
             }
             chain.proceed()
