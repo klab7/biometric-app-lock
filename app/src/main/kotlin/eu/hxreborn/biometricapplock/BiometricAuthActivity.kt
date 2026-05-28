@@ -93,11 +93,15 @@ class BiometricAuthActivity : Activity() {
         val nonce = authToken ?: return
         val cls = targetCls
 
+        val launcherIntent = packageManager.getLaunchIntentForPackage(pkg)
+        val launcherCls = launcherIntent?.component?.className
+
+        // Launcher-class relaunch reuses the canonical launcher intent so Android brings the existing
+        // task forward (HOT) instead of creating a trampoline Activity that flickers and reloads state.
         val target =
-            if (cls != null) {
-                Intent().apply { component = ComponentName(pkg, cls) }
-            } else {
-                packageManager.getLaunchIntentForPackage(pkg)
+            when {
+                cls == null || cls == launcherCls -> launcherIntent
+                else -> Intent().apply { component = ComponentName(pkg, cls) }
             }
         if (target == null) {
             Log.w(TAG, "no launch intent pkg=$pkg, going home")
@@ -106,9 +110,9 @@ class BiometricAuthActivity : Activity() {
         }
 
         target.putExtra(EXTRA_AUTH_TOKEN, nonce)
-        target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
 
-        Log.i(TAG, "auth success, launching $pkg")
+        Log.i(TAG, "auth success, launching $pkg cls=$cls launcherMatch=${cls == launcherCls}")
         runCatching { startActivity(target) }.onFailure {
             Log.w(TAG, "launch failed pkg=$pkg: ${it.message}")
             goHome()
