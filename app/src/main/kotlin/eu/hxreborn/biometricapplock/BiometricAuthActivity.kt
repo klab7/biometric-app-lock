@@ -72,11 +72,12 @@ class BiometricAuthActivity : Activity() {
         replied = true
         Log.d(TAG, "onResult code=$code pkg=$targetPkg")
         if (code == AUTH_OK) {
+            // noHistory tears this down once the target draws, so we skip the home-flashing finish()
             launchTarget()
         } else {
             goHome()
+            finish()
         }
-        finish()
     }
 
     private fun goHome() {
@@ -104,7 +105,11 @@ class BiometricAuthActivity : Activity() {
         }
 
         target.putExtra(EXTRA_AUTH_TOKEN, token)
-        target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        target.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                Intent.FLAG_ACTIVITY_NO_ANIMATION,
+        )
 
         Log.i(TAG, "auth success, launching $pkg cls=$cls")
         runCatching { startActivity(target) }.onFailure {
