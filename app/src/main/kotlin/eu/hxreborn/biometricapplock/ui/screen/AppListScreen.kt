@@ -116,7 +116,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private data class AppItem(
-    val applicationInfo: ApplicationInfo,
     val label: String,
     val packageName: String,
     val isSystem: Boolean,
@@ -151,7 +150,6 @@ private suspend fun loadApps(
                 .map { (packageName, appInfo) ->
                     async {
                         AppItem(
-                            applicationInfo = appInfo,
                             label = appInfo.loadLabel(pm).toString(),
                             packageName = packageName,
                             isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
@@ -164,14 +162,13 @@ private suspend fun loadApps(
 private val iconCache = LruCache<String, ImageBitmap>(200)
 
 @Composable
-private fun rememberAppIcon(appInfo: ApplicationInfo): ImageBitmap? {
+private fun rememberAppIcon(packageName: String): ImageBitmap? {
     val pm = LocalContext.current.packageManager
-    val packageName = appInfo.packageName
     return produceState<ImageBitmap?>(initialValue = iconCache.get(packageName), key1 = packageName) {
         if (value != null) return@produceState
         value =
             withContext(Dispatchers.IO) {
-                runCatching { appInfo.loadIcon(pm).toBitmap().asImageBitmap() }
+                runCatching { pm.getApplicationIcon(packageName).toBitmap().asImageBitmap() }
                     .getOrNull()
                     ?.also { iconCache.put(packageName, it) }
             }
@@ -310,7 +307,7 @@ private fun AppRow(
     onNavigateToDetail: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val icon = rememberAppIcon(app.applicationInfo)
+    val icon = rememberAppIcon(app.packageName)
 
     SectionCard(
         position = position,
@@ -451,6 +448,7 @@ fun AppListScreen(
     onNavigateToAppDetail: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val app = App.from(context)
     val pm = context.packageManager
 
     val scope by viewModel.scope.collectAsStateWithLifecycle()
@@ -469,7 +467,7 @@ fun AppListScreen(
             withContext(Dispatchers.IO) {
                 pm.getInstalledApplications(0).mapTo(mutableSetOf()) { it.packageName }
             }
-        App.appOverridesRepository.prune(installed)
+        app.appOverridesRepository.prune(installed)
     }
     val isInitialLoading = appState.isLoading && appState.apps.isEmpty()
 
