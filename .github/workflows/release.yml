@@ -36,18 +36,20 @@ jobs:
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 -d > ${{ runner.temp }}/release.keystore
 
-      - name: Build release APK
+      - name: Build APKs
         env:
           RELEASE_STORE_FILE: ${{ runner.temp }}/release.keystore
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleRelease :app:assembleDebug
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
           mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}.apk
+             app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
+          mv app/build/outputs/apk/debug/app-debug.apk \
+             app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
 
       - name: Generate changelog
         id: cliff
@@ -62,14 +64,18 @@ jobs:
         id: gh_release
         uses: softprops/action-gh-release@v3
         with:
-          files: app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}.apk
+          files: |
+            app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
+            app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
           body: ${{ steps.cliff.outputs.content }}
 
-      - name: Upload APK artifact for mirror job
+      - name: Upload APK artifacts for mirror job
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}.apk
+          path: |
+            app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
+            app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
           retention-days: 1
 
   mirror:

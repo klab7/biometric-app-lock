@@ -82,7 +82,7 @@
     <string name="settings_hide_recents_preview_title">Hide preview in recents</string>
     <string name="settings_hide_recents_preview_summary">Hides the app\'s preview in recents while it\'s locked</string>
     <string name="settings_prevent_uninstall_title">Prevent uninstall</string>
-    <string name="settings_prevent_uninstall_summary">Stops this app from being uninstalled. Turn it off here before removing the module</string>
+    <string name="settings_prevent_uninstall_summary">Blocks uninstall attempts. Disable the module in your Xposed manager and reboot to uninstall it.</string>
     <string name="uninstall_blocked_toast">This app is protected and can\'t be uninstalled</string>
 
     <string name="settings_about">About</string>
