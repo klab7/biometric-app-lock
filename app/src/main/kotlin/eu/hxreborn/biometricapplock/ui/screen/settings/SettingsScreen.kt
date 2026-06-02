@@ -3,6 +3,7 @@
 
 package eu.hxreborn.biometricapplock.ui.screen.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.RoundedCorner
 import androidx.compose.material.icons.outlined.ScreenLockPortrait
 import androidx.compose.material.icons.outlined.Screenshot
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -62,12 +64,17 @@ import eu.hxreborn.biometricapplock.ui.screen.RelockDelayDialog
 import eu.hxreborn.biometricapplock.ui.screen.relockDelaySummary
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.util.LauncherIconHelper
+import eu.hxreborn.biometricapplock.ui.viewmodel.FrameworkInfo
 import eu.hxreborn.biometricapplock.updates.ChangeType
 import eu.hxreborn.biometricapplock.updates.UpdateSheetState
+import eu.hxreborn.biometricapplock.util.DiagnosticsExporter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
+    framework: FrameworkInfo?,
+    rootGranted: Boolean?,
     onNavigateToAbout: () -> Unit,
     onShowUpdateSheet: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -334,6 +341,40 @@ fun SettingsScreen(
                     summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
                     position = SectionPosition.Top,
                     onClick = { showWhatsNew = true },
+                )
+            }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.Share,
+                    title = stringResource(R.string.about_send_logs_title),
+                    summary =
+                        stringResource(
+                            if (rootGranted == false) {
+                                R.string.about_send_logs_no_root
+                            } else {
+                                R.string.about_send_logs_summary
+                            },
+                        ),
+                    position = SectionPosition.Middle,
+                    enabled = rootGranted != false,
+                    onClick = {
+                        val frameworkLabel = framework?.let { "${it.name} ${it.version}" }
+                        Toast
+                            .makeText(context, R.string.diagnostics_collecting, Toast.LENGTH_SHORT)
+                            .show()
+                        coroutineScope.launch {
+                            try {
+                                val file = DiagnosticsExporter.export(context, frameworkLabel)
+                                DiagnosticsExporter.share(context, file)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                Toast
+                                    .makeText(context, R.string.diagnostics_no_logs, Toast.LENGTH_LONG)
+                                    .show()
+                            }
+                        }
+                    },
                 )
             }
             item {

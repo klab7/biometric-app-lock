@@ -215,7 +215,11 @@ fun MainNavDisplay(
                     )
                 }
                 entry<Screen.Settings> {
+                    val framework by viewModel.framework.collectAsStateWithLifecycle()
+                    val rootGranted by viewModel.rootGranted.collectAsStateWithLifecycle()
                     SettingsScreen(
+                        framework = framework,
+                        rootGranted = rootGranted,
                         onNavigateToAbout = dropUnlessResumed { backStack.add(Screen.About) },
                         onShowUpdateSheet = onShowUpdateSheet,
                         contentPadding = contentPadding,
