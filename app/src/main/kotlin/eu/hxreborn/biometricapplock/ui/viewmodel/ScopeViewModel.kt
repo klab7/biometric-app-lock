@@ -10,13 +10,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import eu.hxreborn.biometricapplock.App
 import eu.hxreborn.biometricapplock.prefs.Prefs
+import eu.hxreborn.biometricapplock.util.RootShell
 import io.github.libxposed.service.XposedService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class FrameworkInfo(
     val name: String,
@@ -49,6 +52,9 @@ class ScopeViewModel(
     private val _serviceLoadEvent = MutableStateFlow<ServiceLoadEvent?>(null)
     val serviceLoadEvent: StateFlow<ServiceLoadEvent?> = _serviceLoadEvent.asStateFlow()
 
+    private val _rootGranted = MutableStateFlow<Boolean?>(null)
+    val rootGranted: StateFlow<Boolean?> = _rootGranted.asStateFlow()
+
     private val apkUpdatedAfterBoot: Boolean by lazy {
         runCatching {
             val bootEpoch = System.currentTimeMillis() - SystemClock.elapsedRealtime()
@@ -72,6 +78,9 @@ class ScopeViewModel(
     init {
         app.boundService?.let { onServiceBound(it) }
         _scope.value = readLockedPackages()
+        viewModelScope.launch(Dispatchers.IO) {
+            _rootGranted.value = RootShell.isRootGranted()
+        }
     }
 
     fun onServiceBound(service: XposedService) {
