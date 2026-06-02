@@ -46,10 +46,11 @@ jobs:
 
       - name: Rename APKs
         run: |
+          mkdir -p app/build/outputs/apk/dist
           mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
+             app/build/outputs/apk/dist/biometric-app-lock-${{ github.ref_name }}-release.apk
           mv app/build/outputs/apk/debug/app-debug.apk \
-             app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
+             app/build/outputs/apk/dist/biometric-app-lock-${{ github.ref_name }}-debug.apk
 
       - name: Generate changelog
         id: cliff
@@ -64,18 +65,14 @@ jobs:
         id: gh_release
         uses: softprops/action-gh-release@v3
         with:
-          files: |
-            app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
-            app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
+          files: app/build/outputs/apk/dist/biometric-app-lock-${{ github.ref_name }}-*.apk
           body: ${{ steps.cliff.outputs.content }}
 
       - name: Upload APK artifacts for mirror job
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: |
-            app/build/outputs/apk/release/biometric-app-lock-${{ github.ref_name }}-release.apk
-            app/build/outputs/apk/debug/biometric-app-lock-${{ github.ref_name }}-debug.apk
+          path: app/build/outputs/apk/dist/
           retention-days: 1
 
   mirror:
