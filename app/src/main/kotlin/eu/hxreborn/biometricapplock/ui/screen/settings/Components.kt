@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -50,9 +51,10 @@ fun PreferenceRow(
     summary: String?,
     modifier: Modifier = Modifier,
     position: SectionPosition = SectionPosition.Single,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
-) = PreferenceRow(rememberVectorPainter(icon), title, summary, modifier, position, onClick, trailing)
+) = PreferenceRow(rememberVectorPainter(icon), title, summary, modifier, position, enabled, onClick, trailing)
 
 @Composable
 fun PreferenceRow(
@@ -61,6 +63,7 @@ fun PreferenceRow(
     summary: String?,
     modifier: Modifier = Modifier,
     position: SectionPosition = SectionPosition.Single,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
@@ -69,6 +72,7 @@ fun PreferenceRow(
             icon = icon,
             title = title,
             summary = summary,
+            enabled = enabled,
             onClick = onClick,
             trailing = trailing,
         )
@@ -80,6 +84,7 @@ fun PreferenceRowContent(
     icon: Painter,
     title: String,
     summary: String?,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
@@ -87,7 +92,8 @@ fun PreferenceRowContent(
         Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = Tokens.PreferenceRowMinHeight)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .alpha(if (enabled) 1f else 0.38f)
+            .then(if (enabled && onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(
                 horizontal = Tokens.PreferenceRowHorizontalPadding,
                 vertical = Tokens.PreferenceRowVerticalPadding,

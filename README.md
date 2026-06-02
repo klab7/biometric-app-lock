@@ -45,6 +45,12 @@ Toggle in Settings → Lock & privacy. While on, the module blocks every attempt
 > [!IMPORTANT]
 > Can't open the app to turn the toggle off? Disable the module in your Xposed manager and reboot (the block only loads at boot), or boot into safe mode where Xposed is off. Either one lets you uninstall.
 
+## Reporting issues
+
+About → Links → Share logs exports the module's log lines as a text file and opens a share sheet. Reproduce the issue first, then share.
+
+Root is required to read the LSPosed logs. If unavailable, the row is disabled. Debug builds produce more verbose logs and are the most useful for diagnosing issues.
+
 ## License
 
 [![GPL-3.0-only](https://img.shields.io/badge/LICENSE-GPL--3.0--only-%23A42E2B?style=for-the-badge&logo=gnu&logoColor=white&logoPosition=right)](LICENSE)

@@ -3,6 +3,7 @@
 package eu.hxreborn.biometricapplock.ui.screen
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -40,6 +42,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -63,7 +66,11 @@ import eu.hxreborn.biometricapplock.ui.screen.settings.PreferenceRow
 import eu.hxreborn.biometricapplock.ui.screen.settings.SettingsSectionHeader
 import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.viewmodel.FrameworkInfo
+import eu.hxreborn.biometricapplock.util.DiagnosticsExporter
+import eu.hxreborn.biometricapplock.util.RootShell
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val REPO_URL = "https://github.com/hxreborn/biometric-app-lock"
@@ -79,6 +86,10 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val packageName = context.packageName
+    val coroutineScope = rememberCoroutineScope()
+    val rootGranted by produceState<Boolean?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { RootShell.isRootGranted() }
+    }
     val icon by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
         value =
             withContext(Dispatchers.IO) {
@@ -193,11 +204,45 @@ fun AboutScreen(
                     icon = Icons.Outlined.BugReport,
                     title = stringResource(R.string.about_report_issue_title),
                     summary = stringResource(R.string.about_report_issue_summary),
-                    position = SectionPosition.Bottom,
+                    position = SectionPosition.Middle,
                     onClick = {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, "$REPO_URL/issues/new".toUri()),
                         )
+                    },
+                )
+            }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.Share,
+                    title = stringResource(R.string.about_send_logs_title),
+                    summary =
+                        stringResource(
+                            if (rootGranted == false) {
+                                R.string.about_send_logs_no_root
+                            } else {
+                                R.string.about_send_logs_summary
+                            },
+                        ),
+                    position = SectionPosition.Bottom,
+                    enabled = rootGranted != false,
+                    onClick = {
+                        val frameworkLabel = framework?.let { "${it.name} ${it.version}" }
+                        Toast
+                            .makeText(context, R.string.diagnostics_collecting, Toast.LENGTH_SHORT)
+                            .show()
+                        coroutineScope.launch {
+                            try {
+                                val file = DiagnosticsExporter.export(context, frameworkLabel)
+                                DiagnosticsExporter.share(context, file)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                Toast
+                                    .makeText(context, R.string.diagnostics_no_logs, Toast.LENGTH_LONG)
+                                    .show()
+                            }
+                        }
                     },
                 )
             }
