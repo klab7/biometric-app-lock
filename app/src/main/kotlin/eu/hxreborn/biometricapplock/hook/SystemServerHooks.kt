@@ -4,6 +4,7 @@ import android.app.TaskInfo
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.os.Build
 import android.os.Handler
 import android.os.SystemClock
 import eu.hxreborn.biometricapplock.receiver.registerPackageEvents
@@ -48,6 +49,7 @@ internal fun XposedModule.registerSystemServerHooks(
     locked: Set<String>,
 ) {
     lockedPackages = locked
+    Logger.info("registering system_server hooks sdk=${Build.VERSION.SDK_INT}")
     reflection =
         runCatching { SystemServerReflection(classLoader) }
             .onFailure { Logger.error("reflection init failed: ${it.message}", it) }
@@ -98,7 +100,7 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
             }
             tryRedirect(chain.thisObject, packageName, activityInfo.name)
         }
-        Logger.info("hooked intercept")
+        Logger.info("hooked intercept args=${method.parameterCount}")
     }.onFailure { Logger.error("hookLaunchIntercept failed: ${it.message}", it) }
 }
 
@@ -123,7 +125,7 @@ private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
             }
             chain.proceed()
         }
-        Logger.info("hooked onActivityLaunched")
+        Logger.info("hooked onActivityLaunched args=${method.parameterCount}")
     }.onFailure { Logger.error("hookActivityLaunched failed: ${it.message}", it) }
 }
 
@@ -155,7 +157,7 @@ private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
             }
             chain.proceed()
         }
-        Logger.info("hooked startActivityFromRecents")
+        Logger.info("hooked startActivityFromRecents args=${method.parameterCount}")
     }.onFailure { Logger.error("hookRecentsLaunch failed: ${it.message}", it) }
 }
 
@@ -185,7 +187,7 @@ private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
             }
             chain.proceed()
         }
-        Logger.info("hooked onScreenAwakeChanged")
+        Logger.info("hooked onScreenAwakeChanged args=${method.parameterCount}")
     }.onFailure { Logger.error("hookScreenAwake failed: ${it.message}", it) }
 }
 
@@ -215,6 +217,6 @@ private fun XposedModule.hookFlagSecure(classLoader: ClassLoader) {
             }
             chain.proceed()
         }
-        Logger.info("hooked isSecureLocked")
+        Logger.info("hooked isSecureLocked args=${method.parameterCount}")
     }.onFailure { Logger.warn("hookFlagSecure not available: ${it.message}") }
 }

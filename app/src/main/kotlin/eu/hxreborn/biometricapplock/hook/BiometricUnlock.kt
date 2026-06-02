@@ -78,16 +78,15 @@ private fun applyRedirect(
     val startFlags = reflection.startFlagsField.getInt(interceptor)
 
     val authIntent = buildAuthIntent(targetPackageName, targetClassName, token)
-    val resolvedInfo =
-        reflection.resolveIntent.invoke(
-            activityTaskSupervisor,
-            authIntent,
-            null,
-            userId,
-            0,
-            realUid,
-            realPid,
-        )
+    val resolveArgs =
+        if (reflection.resolveIntent.parameterCount >= 6) {
+            // A14+ (API 34+) takes a trailing callingPid arg
+            arrayOf<Any?>(authIntent, null, userId, 0, realUid, realPid)
+        } else {
+            // A13 (API 33) has no callingPid arg
+            arrayOf<Any?>(authIntent, null, userId, 0, realUid)
+        }
+    val resolvedInfo = reflection.resolveIntent.invoke(activityTaskSupervisor, *resolveArgs)
     val activityInfo =
         reflection.resolveActivity.invoke(
             activityTaskSupervisor,

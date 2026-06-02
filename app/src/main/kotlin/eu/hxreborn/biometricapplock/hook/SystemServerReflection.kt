@@ -1,6 +1,8 @@
 package eu.hxreborn.biometricapplock.hook
 
 import android.content.Intent
+import android.os.Build
+import eu.hxreborn.biometricapplock.util.Logger
 import java.lang.reflect.Executable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -8,15 +10,27 @@ import java.lang.reflect.Method
 @Volatile
 internal var reflection: SystemServerReflection? = null
 
+// intercept arg count drifts by API: 8 on A13, 9 on A14, 10 on A15, 11 on A16
 internal fun ClassLoader.findMethod(
     className: String,
     methodName: String,
     argCount: Int,
 ): Executable {
     val cls = loadClass(className)
-    return cls.declaredMethods.firstOrNull {
-        it.name == methodName && it.parameterCount == argCount
-    } ?: error("$className.$methodName($argCount args) not found")
+    val named = cls.declaredMethods.filter { it.name == methodName }
+    named.firstOrNull { it.parameterCount == argCount }?.let { return it }
+    // exact count is gone on this build, fall back to the only match by name
+    named.singleOrNull()?.let {
+        Logger.warn(
+            "$className.$methodName arg count drift expected=$argCount " +
+                "actual=${it.parameterCount} sdk=${Build.VERSION.SDK_INT}",
+        )
+        return it
+    }
+    error(
+        "$className.$methodName($argCount args) not found sdk=${Build.VERSION.SDK_INT} " +
+            "candidates=${named.map { it.parameterCount }}",
+    )
 }
 
 internal class SystemServerReflection(
@@ -45,16 +59,12 @@ internal class SystemServerReflection(
     val userIdField: Field = activityStartInterceptorClass.getField("mUserId")
     val startFlagsField: Field = activityStartInterceptorClass.getField("mStartFlags")
 
+    // resolveIntent is 5 args on A13 and 6 on A14+ (added callingPid), match by name
     val resolveIntent: Method =
-        activityTaskSupervisorClass.getMethod(
-            "resolveIntent",
-            Intent::class.java,
-            String::class.java,
-            Int::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType,
-        )
+        activityTaskSupervisorClass.declaredMethods
+            .filter { it.name == "resolveIntent" }
+            .maxByOrNull { it.parameterCount }
+            ?: error("ActivityTaskSupervisor.resolveIntent not found")
 
     val resolveActivity: Method =
         activityTaskSupervisorClass.getMethod(
