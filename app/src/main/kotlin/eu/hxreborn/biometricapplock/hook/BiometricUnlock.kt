@@ -15,6 +15,9 @@ private const val TOKEN_TTL_MS = 2 * 60 * 1000L
 
 private val pendingTokens = ConcurrentHashMap<String, Long>()
 
+// keep the exact launch we gated so auth resumes it instead of a rebuilt one
+private val pendingLaunches = ConcurrentHashMap<String, Intent>()
+
 private fun mintToken(): String {
     sweepExpiredTokens()
     val token = UUID.randomUUID().toString()
@@ -25,12 +28,20 @@ private fun mintToken(): String {
 private fun sweepExpiredTokens() {
     val cutoff = SystemClock.elapsedRealtime() - TOKEN_TTL_MS
     pendingTokens.entries.removeIf { it.value < cutoff }
+    pendingLaunches.keys.retainAll(pendingTokens.keys)
+}
+
+private fun discardToken(token: String) {
+    pendingTokens.remove(token)
+    pendingLaunches.remove(token)
 }
 
 private fun consumeToken(token: String): Boolean {
     val issuedAt = pendingTokens.remove(token) ?: return false
     return SystemClock.elapsedRealtime() - issuedAt <= TOKEN_TTL_MS
 }
+
+internal fun takePendingLaunch(token: String): Intent? = pendingLaunches.remove(token)
 
 internal fun isValidAuthToken(
     intent: Intent?,
@@ -55,7 +66,7 @@ internal fun tryRedirect(
 
     runCatching { applyRedirect(reflection, interceptor, packageName, className, token) }
         .onFailure {
-            pendingTokens.remove(token)
+            discardToken(token)
             Logger.error("redirect failed: ${it.message}", it)
             return false
         }
@@ -71,6 +82,12 @@ private fun applyRedirect(
     targetClassName: String,
     token: String,
 ) {
+    val originalIntent =
+        runCatching {
+            reflection.intentField.get(
+                interceptor,
+            ) as? Intent
+        }.getOrNull()
     val activityTaskSupervisor = reflection.supervisorField.get(interceptor)
     val realPid = reflection.realCallingPidField.getInt(interceptor)
     val realUid = reflection.realCallingUidField.getInt(interceptor)
@@ -78,13 +95,15 @@ private fun applyRedirect(
     val startFlags = reflection.startFlagsField.getInt(interceptor)
 
     val authIntent = buildAuthIntent(targetPackageName, targetClassName, token)
+
+    originalIntent?.let { pendingLaunches[token] = Intent(it) }
     val resolveArgs =
         if (reflection.resolveIntent.parameterCount >= 6) {
             // A14+ (API 34+) takes a trailing callingPid arg
-            arrayOf<Any?>(authIntent, null, userId, 0, realUid, realPid)
+            arrayOf(authIntent, null, userId, 0, realUid, realPid)
         } else {
             // A13 (API 33) has no callingPid arg
-            arrayOf<Any?>(authIntent, null, userId, 0, realUid)
+            arrayOf(authIntent, null, userId, 0, realUid)
         }
     val resolvedInfo = reflection.resolveIntent.invoke(activityTaskSupervisor, *resolveArgs)
     val activityInfo =
@@ -103,6 +122,19 @@ private fun applyRedirect(
     reflection.callingPidField.setInt(interceptor, realPid)
     reflection.callingUidField.setInt(interceptor, realUid)
     reflection.resolvedTypeField.set(interceptor, null)
+}
+
+// system_server can start non-exported targets and launch without the app-process restrictions
+internal fun resumeOriginalLaunch(original: Intent) {
+    val reflection = reflection ?: return
+    val atms = atmsRef ?: return
+    val handler = reflection.handlerField.get(atms) as? Handler ?: return
+    val context = reflection.contextField.get(atms) as? Context ?: return
+    val launch = Intent(original).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+    handler.post {
+        runCatching { context.startActivity(launch) }
+            .onFailure { Logger.error("resume launch failed: ${it.message}", it) }
+    }
 }
 
 internal fun postAuthLaunch(

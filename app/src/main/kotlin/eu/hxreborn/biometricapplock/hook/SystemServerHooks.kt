@@ -122,17 +122,35 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
                 "intercept",
                 11,
             )
+        // resolve indices once at install time so a future arg shift can't desync the hot path
+        val intentIdx =
+            method.firstArgIndexOfType("Intent").let { if (it >= 0) it else 0 }
+        val actInfoIdx =
+            method.firstArgIndexOfType("ActivityInfo").let { if (it >= 0) it else 2 }
+        Logger.info(
+            "intercept indices intent=$intentIdx aInfo=$actInfoIdx args=${method.parameterCount}",
+        )
         hook(method).intercept { chain ->
             if (atmsRef == null) {
                 atmsRef = captureAtms(chain.thisObject)
                 ensurePackageEventsRegistered()
             }
 
-            val intent = chain.args[0] as? Intent
-            val activityInfo = chain.args[2] as? ActivityInfo
+            val intent = chain.args[intentIdx] as? Intent
+            val activityInfo = chain.args[actInfoIdx] as? ActivityInfo
             val packageName = activityInfo?.packageName
 
-            if (isValidAuthToken(intent, packageName)) return@intercept chain.proceed()
+            val authToken = intent?.getStringExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN)
+            if (isValidAuthToken(intent, packageName)) {
+                val original = authToken?.let { takePendingLaunch(it) }
+                if (original != null) {
+                    // abort this signal launch, resume the real gated intent from system_server
+                    Logger.debug { "resume original pkg=$packageName" }
+                    resumeOriginalLaunch(original)
+                    return@intercept true
+                }
+                return@intercept chain.proceed()
+            }
 
             relockOtherPackages(packageName)
 

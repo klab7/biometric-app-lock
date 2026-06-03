@@ -1,7 +1,6 @@
 package eu.hxreborn.biometricapplock
 
 import android.app.Activity
-import android.content.ComponentName
 import android.content.Intent
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
@@ -12,14 +11,12 @@ private const val TAG = "BiometricAppLock"
 
 class BiometricAuthActivity : Activity() {
     private var targetPkg: String? = null
-    private var targetCls: String? = null
     private var authToken: String? = null
     private var replied = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         targetPkg = intent.getStringExtra(EXTRA_TARGET_PKG)
-        targetCls = intent.getStringExtra(EXTRA_TARGET_CLS)
         authToken = intent.getStringExtra(EXTRA_AUTH_TOKEN)
 
         if (targetPkg.isNullOrEmpty() || authToken.isNullOrEmpty()) {
@@ -28,7 +25,12 @@ class BiometricAuthActivity : Activity() {
             return
         }
         Log.i(TAG, "gating $targetPkg")
-        showPrompt("Unlock $targetPkg")
+        val pkg = targetPkg ?: return
+        val label =
+            runCatching {
+                packageManager.getApplicationInfo(pkg, 0).loadLabel(packageManager).toString()
+            }.getOrDefault(pkg)
+        showPrompt("Unlock $label")
     }
 
     override fun onDestroy() {
@@ -67,17 +69,17 @@ class BiometricAuthActivity : Activity() {
             )
     }
 
+    override fun onStop() {
+        super.onStop()
+        if (replied) finish()
+    }
+
     private fun onResult(code: Int) {
         if (replied) return
         replied = true
         Log.d(TAG, "onResult code=$code pkg=$targetPkg")
-        if (code == AUTH_OK) {
-            // noHistory tears this down once the target draws, so we skip the home-flashing finish()
-            launchTarget()
-        } else {
-            goHome()
-            finish()
-        }
+        if (code == AUTH_OK && launchTarget()) return
+        goHome()
     }
 
     private fun goHome() {
@@ -89,45 +91,29 @@ class BiometricAuthActivity : Activity() {
         )
     }
 
-    private fun launchTarget() {
-        val pkg = targetPkg ?: return
-        val token = authToken ?: return
-        val cls = targetCls
-
-        // the notification or deep-link target is often non-exported, so prefer the launcher Activity
-        val target =
-            packageManager.getLaunchIntentForPackage(pkg)
-                ?: cls?.let { Intent().apply { component = ComponentName(pkg, it) } }
-        if (target == null) {
-            Log.w(TAG, "no launch intent pkg=$pkg, going home")
-            goHome()
-            return
-        }
-
-        target.putExtra(EXTRA_AUTH_TOKEN, token)
-        target.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                Intent.FLAG_ACTIVITY_NO_ANIMATION,
-        )
-
-        Log.i(TAG, "auth success, launching $pkg cls=$cls")
-        runCatching { startActivity(target) }.onFailure {
-            Log.w(TAG, "launch failed pkg=$pkg: ${it.message}")
-            goHome()
-        }
+    private fun launchTarget(): Boolean {
+        val pkg = targetPkg ?: return false
+        val token = authToken ?: return false
+        // just carries the token back so the hook can resume the real launch
+        val signal = packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        signal.putExtra(EXTRA_AUTH_TOKEN, token)
+        signal.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        Log.i(TAG, "auth ok, signaling resume pkg=$pkg")
+        return runCatching { startActivity(signal) }
+            .onFailure { Log.w(TAG, "signal failed pkg=$pkg: ${it.message}") }
+            .isSuccess
     }
 
     companion object {
-        const val EXTRA_TARGET_PKG = "eu.hxreborn.biometricapplock.TARGET_PKG"
-        const val EXTRA_TARGET_CLS = "eu.hxreborn.biometricapplock.TARGET_CLS"
-        const val EXTRA_AUTH_TOKEN = "eu.hxreborn.biometricapplock.AUTH_TOKEN"
+        const val MODULE_PACKAGE = "eu.hxreborn.biometricapplock"
+        const val AUTH_ACTIVITY = "$MODULE_PACKAGE.BiometricAuthActivity"
+
+        const val EXTRA_TARGET_PKG = "$MODULE_PACKAGE.TARGET_PKG"
+        const val EXTRA_TARGET_CLS = "$MODULE_PACKAGE.TARGET_CLS"
+        const val EXTRA_AUTH_TOKEN = "$MODULE_PACKAGE.AUTH_TOKEN"
 
         private const val AUTH_OK = 1
         private const val AUTH_CANCELLED = 2
         private const val AUTH_ERROR = 3
-
-        const val MODULE_PACKAGE = "eu.hxreborn.biometricapplock"
-        const val AUTH_ACTIVITY = "$MODULE_PACKAGE.BiometricAuthActivity"
     }
 }
