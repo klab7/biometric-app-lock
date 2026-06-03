@@ -16,17 +16,17 @@ import java.util.Date
 import java.util.Locale
 
 object DiagnosticsExporter {
-    private const val MAX_LINES = 5000
+    private const val MAX_LINES = 20000
 
     private const val CONTACT_EMAIL = "hxreborn@duck.com"
 
-    // system_server hooks log to LSPosed's own file, the module process logs to logcat
+    // system_server hooks log to LSPosed's own file, the module process logs to logcat.
+    // -b all reads every logcat buffer so nothing is missed if a line lands off the main one.
     private const val HOOK_LOG_COMMAND =
         "( grep -h ${Logger.TAG} /data/adb/lspd/log.old/verbose_*.log; " +
-            "grep -h ${Logger.TAG} /data/adb/lspd/log/verbose_*.log ) 2>/dev/null | " +
-            "tail -n $MAX_LINES"
+            "grep -h ${Logger.TAG} /data/adb/lspd/log/verbose_*.log ) 2>/dev/null"
 
-    private const val LOGCAT_COMMAND = "logcat -d -s ${Logger.TAG} 2>/dev/null | tail -n $MAX_LINES"
+    private const val LOGCAT_COMMAND = "logcat -d -b all -s ${Logger.TAG} 2>/dev/null"
 
     class NoLogsException : Exception()
 
@@ -35,9 +35,9 @@ object DiagnosticsExporter {
         framework: String?,
     ): File =
         withContext(Dispatchers.IO) {
-            val hookLog = RootShell.exec(HOOK_LOG_COMMAND).out
-            val appLog = RootShell.exec(LOGCAT_COMMAND).out
-            if (hookLog.isEmpty() && appLog.isEmpty()) throw NoLogsException()
+            val hookLog = RootShell.exec(HOOK_LOG_COMMAND)
+            val appLog = RootShell.exec(LOGCAT_COMMAND)
+            if (hookLog.out.isEmpty() && appLog.out.isEmpty()) throw NoLogsException()
             val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
             File(dir, "biometricapplock-$stamp.log").apply {
@@ -80,15 +80,20 @@ object DiagnosticsExporter {
 
     private fun body(
         framework: String?,
-        hookLog: List<String>,
-        appLog: List<String>,
+        hookLog: RootShell.Result,
+        appLog: RootShell.Result,
     ): String =
         buildString {
+            val capturedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss zzz", Locale.US).format(Date())
             appendLine("BiometricAppLock diagnostics")
-            appendLine("version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("captured $capturedAt")
+            appendLine(
+                "version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.BUILD_TYPE}",
+            )
             appendLine("package ${BuildConfig.APPLICATION_ID}")
             appendLine("device ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("android ${Build.VERSION.RELEASE} sdk ${Build.VERSION.SDK_INT}")
+            appendLine("build ${Build.FINGERPRINT}")
             appendLine("xposed framework: ${framework ?: "unknown"}")
             appendSection("system_server hooks (LSPosed log)", hookLog)
             appendSection("module process (logcat)", appLog)
@@ -96,9 +101,15 @@ object DiagnosticsExporter {
 
     private fun StringBuilder.appendSection(
         title: String,
-        lines: List<String>,
+        result: RootShell.Result,
     ) {
+        val lines = result.out
         appendLine("---- $title ----")
-        if (lines.isEmpty()) appendLine("(none)") else lines.forEach { appendLine(it) }
+        if (result.timedOut) appendLine("(collection timed out, output may be incomplete)")
+        if (lines.size > MAX_LINES) {
+            appendLine("(showing last $MAX_LINES of ${lines.size} lines, older entries omitted)")
+        }
+        val shown = lines.takeLast(MAX_LINES)
+        if (shown.isEmpty()) appendLine("(none)") else shown.forEach { appendLine(it) }
     }
 }

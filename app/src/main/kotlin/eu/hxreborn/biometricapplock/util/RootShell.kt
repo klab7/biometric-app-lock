@@ -3,11 +3,13 @@ package eu.hxreborn.biometricapplock.util
 import android.util.Log
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 object RootShell {
     data class Result(
         val code: Int,
         val out: List<String>,
+        val timedOut: Boolean = false,
     )
 
     private val FAILURE = Result(-1, emptyList())
@@ -26,10 +28,12 @@ object RootShell {
     private fun runShell(commands: Array<out String>): Result {
         val process = ProcessBuilder("su").start()
 
+        val timedOut = AtomicBoolean(false)
         val watchdog =
             Thread {
                 runCatching {
                     if (!process.waitFor(SHELL_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                        timedOut.set(true)
                         process.destroyForcibly()
                     }
                 }
@@ -69,6 +73,6 @@ object RootShell {
         drainErr.join(STDERR_JOIN_MS)
         watchdog.interrupt()
         process.waitFor()
-        return Result(code, out)
+        return Result(code, out, timedOut.get())
     }
 }
