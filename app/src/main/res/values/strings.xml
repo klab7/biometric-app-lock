@@ -96,7 +96,11 @@
     <string name="settings_lsposed_framework">Xposed framework</string>
     <string name="settings_lsposed_framework_unbound">Not bound</string>
 
-    <string name="self_lock_prompt_title">Unlock</string>
+    <string name="self_lock_prompt_title">Unlock with your fingerprint</string>
+    <string name="self_lock_action">Tap to unlock</string>
+    <string name="self_lock_use_credential">Use screen lock</string>
+    <string name="self_lock_error_failed">Authentication failed. Try again.</string>
+    <string name="self_lock_error_lockout">Too many attempts. Use your screen lock.</string>
     <string name="biometric_prompt_unlock_title">Unlock %1$s</string>
 
     <string name="about_title">About</string>

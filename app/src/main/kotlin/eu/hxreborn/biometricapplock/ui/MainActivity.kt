@@ -11,6 +11,14 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -23,7 +31,9 @@ import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.prefs.ThemeMode
 import eu.hxreborn.biometricapplock.ui.theme.BiometricAppLockTheme
 import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
+import eu.hxreborn.biometricapplock.ui.viewmodel.SelfLockState
 import eu.hxreborn.biometricapplock.ui.viewmodel.SelfLockViewModel
+import eu.hxreborn.biometricapplock.util.pickAuthenticators
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 
@@ -43,7 +53,7 @@ class MainActivity :
         setContent {
             val app = App.from(this@MainActivity)
             val prefs by app.prefsRepository.state.collectAsStateWithLifecycle(initialValue = AppPrefs.Defaults)
-            val unlocked by selfLock.unlocked.collectAsStateWithLifecycle()
+            val lockState by selfLock.state.collectAsStateWithLifecycle()
 
             SideEffect {
                 if (prefs.selfLock) {
@@ -76,10 +86,28 @@ class MainActivity :
                 themeMode = prefs.themeMode,
                 useDynamicColor = prefs.useDynamicColor,
             ) {
-                if (prefs.selfLock && !unlocked) {
-                    SelfLockScreen(onUnlock = ::promptUnlock)
-                } else {
+                if (!prefs.selfLock) {
                     MainScaffold(viewModel = viewModel)
+                } else {
+                    AnimatedContent(
+                        targetState = lockState is SelfLockState.Unlocked,
+                        transitionSpec = {
+                            val spec = tween<Float>(durationMillis = 200, easing = FastOutSlowInEasing)
+                            fadeIn(spec) + scaleIn(spec, initialScale = 0.96f) togetherWith
+                                fadeOut(spec) + scaleOut(spec, targetScale = 0.96f)
+                        },
+                        label = "self_lock_gate",
+                    ) { unlocked ->
+                        if (unlocked) {
+                            MainScaffold(viewModel = viewModel)
+                        } else {
+                            SelfLockScreen(
+                                state = lockState,
+                                onUnlock = { promptUnlock() },
+                                onUseCredential = { promptUnlock(credentialOnly = true) },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -89,8 +117,8 @@ class MainActivity :
         super.onStart()
         val pref = App.from(this).prefsRepository.read(Prefs.SELF_LOCK)
         if (!pref) {
-            selfLock.unlock()
-        } else if (!selfLock.unlocked.value && !promptInFlight) {
+            selfLock.setUnlocked()
+        } else if (selfLock.state.value !is SelfLockState.Unlocked && !promptInFlight) {
             promptUnlock()
         }
     }
@@ -98,19 +126,23 @@ class MainActivity :
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations && !promptInFlight) {
-            selfLock.lock()
+            selfLock.setLocked()
         }
     }
 
-    private fun promptUnlock() {
+    private fun promptUnlock(credentialOnly: Boolean = false) {
         if (promptInFlight) return
         val bm = getSystemService(BiometricManager::class.java)
-        val authenticators = pickAuthenticators(bm)
-        if (authenticators == -1) {
-            selfLock.unlock()
+        val authenticators =
+            if (credentialOnly) Authenticators.DEVICE_CREDENTIAL else pickAuthenticators(bm)
+        if (authenticators == null) {
+            // allow if no security enrolled for module settings app
+            selfLock.setUnlocked()
             return
         }
         promptInFlight = true
+        selfLock.setAuthenticating()
+        var sawFailure = false
         val builder =
             BiometricPrompt
                 .Builder(this)
@@ -118,9 +150,7 @@ class MainActivity :
                 .setConfirmationRequired(false)
                 .setAllowedAuthenticators(authenticators)
         if (authenticators and Authenticators.DEVICE_CREDENTIAL == 0) {
-            builder.setNegativeButton(getString(android.R.string.cancel), mainExecutor) { _, _ ->
-                promptInFlight = false
-            }
+            builder.setNegativeButton(getString(android.R.string.cancel), mainExecutor) { _, _ -> }
         }
         val signal = CancellationSignal()
         cancellationSignal = signal
@@ -131,7 +161,7 @@ class MainActivity :
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         promptInFlight = false
-                        selfLock.unlock()
+                        selfLock.setUnlocked()
                     }
 
                     override fun onAuthenticationError(
@@ -139,25 +169,23 @@ class MainActivity :
                         errString: CharSequence,
                     ) {
                         promptInFlight = false
+                        when (errorCode) {
+                            BiometricPrompt.BIOMETRIC_ERROR_LOCKOUT,
+                            BiometricPrompt.BIOMETRIC_ERROR_LOCKOUT_PERMANENT,
+                            -> selfLock.setLockedOut()
+
+                            else -> selfLock.setLocked(error = sawFailure)
+                        }
                     }
 
-                    override fun onAuthenticationFailed() {}
+                    override fun onAuthenticationFailed() {
+                        sawFailure = true
+                    }
                 },
             )
         }.onFailure {
             promptInFlight = false
-        }
-    }
-
-    private fun pickAuthenticators(bm: BiometricManager): Int {
-        val strongAndCred = Authenticators.BIOMETRIC_STRONG or Authenticators.DEVICE_CREDENTIAL
-        val weak = Authenticators.BIOMETRIC_WEAK
-        val cred = Authenticators.DEVICE_CREDENTIAL
-        return when (BiometricManager.BIOMETRIC_SUCCESS) {
-            bm.canAuthenticate(strongAndCred) -> strongAndCred
-            bm.canAuthenticate(weak) -> weak
-            bm.canAuthenticate(cred) -> cred
-            else -> -1
+            selfLock.setLocked(error = true)
         }
     }
 

@@ -5,15 +5,35 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class SelfLockViewModel : ViewModel() {
-    private val _unlocked = MutableStateFlow(false)
-    val unlocked: StateFlow<Boolean> = _unlocked.asStateFlow()
+sealed interface SelfLockState {
+    data class Locked(
+        val error: Boolean = false,
+    ) : SelfLockState
 
-    fun unlock() {
-        _unlocked.value = true
+    data object Authenticating : SelfLockState
+
+    data object LockedOut : SelfLockState
+
+    data object Unlocked : SelfLockState
+}
+
+class SelfLockViewModel : ViewModel() {
+    private val _state = MutableStateFlow<SelfLockState>(SelfLockState.Locked())
+    val state: StateFlow<SelfLockState> = _state.asStateFlow()
+
+    fun setAuthenticating() {
+        _state.value = SelfLockState.Authenticating
     }
 
-    fun lock() {
-        _unlocked.value = false
+    fun setUnlocked() {
+        _state.value = SelfLockState.Unlocked
+    }
+
+    fun setLockedOut() {
+        _state.value = SelfLockState.LockedOut
+    }
+
+    fun setLocked(error: Boolean = false) {
+        _state.value = SelfLockState.Locked(error)
     }
 }
