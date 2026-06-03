@@ -2,10 +2,13 @@ package eu.hxreborn.biometricapplock
 
 import android.app.Activity
 import android.content.Intent
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricManager.Authenticators
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
+import eu.hxreborn.biometricapplock.util.pickAuthenticators
 
 private const val TAG = "BiometricAppLock"
 
@@ -30,7 +33,7 @@ class BiometricAuthActivity : Activity() {
             runCatching {
                 packageManager.getApplicationInfo(pkg, 0).loadLabel(packageManager).toString()
             }.getOrDefault(pkg)
-        showPrompt("Unlock $label")
+        showPrompt(getString(R.string.biometric_prompt_unlock_title, label))
     }
 
     override fun onDestroy() {
@@ -39,16 +42,30 @@ class BiometricAuthActivity : Activity() {
     }
 
     private fun showPrompt(title: String) {
+        val bm = getSystemService(BiometricManager::class.java)
+        val authenticators = pickAuthenticators(bm)
+        if (authenticators == null) {
+            Log.w(TAG, "no enrolled authenticator, keeping $targetPkg locked")
+            onResult(AUTH_CANCELLED)
+            return
+        }
         val cancellation = CancellationSignal()
         val executor = mainExecutor
 
-        BiometricPrompt
-            .Builder(this)
-            .setTitle(title)
-            .setNegativeButton(getString(android.R.string.cancel), executor) { _, _ ->
+        val builder =
+            BiometricPrompt
+                .Builder(this)
+                .setTitle(title)
+                .setConfirmationRequired(false)
+                .setAllowedAuthenticators(authenticators)
+        if (authenticators and Authenticators.DEVICE_CREDENTIAL == 0) {
+            builder.setNegativeButton(getString(android.R.string.cancel), executor) { _, _ ->
                 cancellation.cancel()
                 onResult(AUTH_CANCELLED)
-            }.build()
+            }
+        }
+        builder
+            .build()
             .authenticate(
                 cancellation,
                 executor,
