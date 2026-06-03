@@ -6,11 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,13 +22,11 @@ import eu.hxreborn.biometricapplock.App
 import eu.hxreborn.biometricapplock.prefs.AppPrefs
 import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.ui.component.ChangelogSheet
-import eu.hxreborn.biometricapplock.ui.component.DebugBadge
 import eu.hxreborn.biometricapplock.ui.navigation.BottomNav
 import eu.hxreborn.biometricapplock.ui.navigation.ClassicBottomNav
 import eu.hxreborn.biometricapplock.ui.navigation.MainNavDisplay
 import eu.hxreborn.biometricapplock.ui.navigation.Screen
 import eu.hxreborn.biometricapplock.ui.navigation.bottomNavItems
-import eu.hxreborn.biometricapplock.ui.theme.Tokens
 import eu.hxreborn.biometricapplock.ui.viewmodel.ScopeViewModel
 import eu.hxreborn.biometricapplock.updates.UpdateState
 import kotlinx.coroutines.delay
@@ -104,13 +97,6 @@ fun MainScaffold(viewModel: ScopeViewModel) {
                 viewModel = viewModel,
                 contentPadding = contentPadding,
                 onShowUpdateSheet = { showUpdateSheet = true },
-            )
-            DebugBadge(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(Tokens.SpacingSm),
             )
         }
     }
