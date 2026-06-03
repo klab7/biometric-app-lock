@@ -19,10 +19,13 @@ object DiagnosticsExporter {
 
     private const val CONTACT_EMAIL = "hxreborn@duck.com"
 
-    private const val GREP_COMMAND =
+    // system_server hooks log to LSPosed's own file, the module process logs to logcat
+    private const val HOOK_LOG_COMMAND =
         "( grep -h ${Logger.TAG} /data/adb/lspd/log.old/verbose_*.log; " +
             "grep -h ${Logger.TAG} /data/adb/lspd/log/verbose_*.log ) 2>/dev/null | " +
             "tail -n $MAX_LINES"
+
+    private const val LOGCAT_COMMAND = "logcat -d -s ${Logger.TAG} 2>/dev/null | tail -n $MAX_LINES"
 
     class NoLogsException : Exception()
 
@@ -31,12 +34,13 @@ object DiagnosticsExporter {
         framework: String?,
     ): File =
         withContext(Dispatchers.IO) {
-            val result = RootShell.exec(GREP_COMMAND)
-            if (result.out.isEmpty()) throw NoLogsException()
+            val hookLog = RootShell.exec(HOOK_LOG_COMMAND).out
+            val appLog = RootShell.exec(LOGCAT_COMMAND).out
+            if (hookLog.isEmpty() && appLog.isEmpty()) throw NoLogsException()
             val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
             File(dir, "biometricapplock-$stamp.log").apply {
-                writeText(header(framework) + result.out.joinToString("\n", postfix = "\n"))
+                writeText(body(framework, hookLog, appLog))
             }
         }
 
@@ -59,7 +63,11 @@ object DiagnosticsExporter {
         )
     }
 
-    private fun header(framework: String?): String =
+    private fun body(
+        framework: String?,
+        hookLog: List<String>,
+        appLog: List<String>,
+    ): String =
         buildString {
             appendLine("BiometricAppLock diagnostics")
             appendLine("version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
@@ -67,6 +75,15 @@ object DiagnosticsExporter {
             appendLine("device ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("android ${Build.VERSION.RELEASE} sdk ${Build.VERSION.SDK_INT}")
             appendLine("xposed framework: ${framework ?: "unknown"}")
-            appendLine("----")
+            appendSection("system_server hooks (LSPosed log)", hookLog)
+            appendSection("module process (logcat)", appLog)
         }
+
+    private fun StringBuilder.appendSection(
+        title: String,
+        lines: List<String>,
+    ) {
+        appendLine("---- $title ----")
+        if (lines.isEmpty()) appendLine("(none)") else lines.forEach { appendLine(it) }
+    }
 }
