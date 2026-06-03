@@ -19,8 +19,8 @@ internal fun ClassLoader.findMethod(
     val cls = loadClass(className)
     val named = cls.declaredMethods.filter { it.name == methodName }
     named.firstOrNull { it.parameterCount == argCount }?.let { return it }
-    // exact count is gone on this build, fall back to the only match by name
-    named.singleOrNull()?.let {
+    // no overload matches the expected arg count on this build, so take the widest one
+    named.maxByOrNull { it.parameterCount }?.let {
         Logger.warn(
             "$className.$methodName arg count drift expected=$argCount " +
                 "actual=${it.parameterCount} sdk=${Build.VERSION.SDK_INT}",
@@ -33,13 +33,29 @@ internal fun ClassLoader.findMethod(
     )
 }
 
+// match an arg by type so a position shift across API levels does not break the hook
+internal fun Executable.firstArgIndexOfType(typeName: String): Int =
+    parameterTypes.indexOfFirst { it.simpleName == typeName || it.name == typeName }
+
+// try framework class names in order so a package move or rename still resolves
+internal fun ClassLoader.anyClassFromNames(vararg names: String): Class<*> {
+    for (name in names) {
+        val cls = runCatching { loadClass(name) }.getOrNull()
+        if (cls != null) return cls
+    }
+    error("no class from ${names.toList()} sdk=${Build.VERSION.SDK_INT}")
+}
+
 internal class SystemServerReflection(
     cl: ClassLoader,
 ) {
     private val activityStartInterceptorClass =
         cl.loadClass("com.android.server.wm.ActivityStartInterceptor")
     private val activityTaskSupervisorClass =
-        cl.loadClass("com.android.server.wm.ActivityTaskSupervisor")
+        cl.anyClassFromNames(
+            "com.android.server.wm.ActivityTaskSupervisor",
+            "com.android.server.wm.ActivityStackSupervisor",
+        )
     private val activityTaskManagerServiceClass =
         cl.loadClass("com.android.server.wm.ActivityTaskManagerService")
     private val activityRecordClass =
