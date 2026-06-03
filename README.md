@@ -47,11 +47,17 @@ Toggle in Settings → Privacy & stealth. While on, the module blocks every atte
 > 1. Turn it off in the app, then uninstall. No reboot needed.
 > 2. If for some reason you can't open the app to disable the toggle, either disable the module in your Xposed manager and reboot or boot to safe mode where Xposed is off and uninstall.
 
+## Block screenshots
+
+Toggle it globally in Settings or per app in its detail screen. Changes apply immediately, no reboot or hot reload. While on, an unlocked locked app's screenshots, screen recording, and recents preview are blocked. The per-app setting overrides the global one, so an app can stay blocked with the global toggle off. It cannot beat modules that force FLAG_SECURE off, like Disable Flag Secure by aviraxp.
+
+After you turn the block off, that app's recents card can stay blank since the system cached it while the block was on. Swipe it off recents and reopen the app for a fresh preview.
+
 ## Reporting issues
 
 Settings → About → Export logs saves the module's log lines to a text file and opens a share sheet, so you can attach them to a [GitHub issue](https://github.com/hxreborn/biometric-app-lock/issues/new), send them by [email](mailto:hxreborn@duck.com), or share via [Telegram](https://t.me/hxreb0rn). Reproduce the issue first, then export.
 
-Reading the LSPosed logs needs root, so the row is disabled without it. Only this module's own log lines are exported, nothing else from your device, so they're safe to attach to a public issue. Debug builds capture the most detail.
+Reading the LSPosed logs needs root. Only this module's own log lines are exported, so they're safe to attach to a public issue. Debug builds help me most.
 
 ## License
 
