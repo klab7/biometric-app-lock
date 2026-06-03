@@ -80,10 +80,12 @@
     <string name="settings_relock_screen_off_title">Re-lock on screen off</string>
     <string name="settings_relock_screen_off_summary">Locks all protected apps as soon as the screen turns off, ignoring the re-lock delay</string>
     <string name="settings_relock_task_removed_title">Re-lock on task removed</string>
-    <string name="settings_relock_task_removed_summary">Locks a protected app again when its task is swiped off the recents screen</string>
+    <string name="settings_relock_task_removed_summary">Locks a protected app again when its task is swiped off the recents screen, ignoring the re-lock delay</string>
 
     <string name="settings_block_screenshots_title">Block screenshots</string>
     <string name="settings_block_screenshots_summary">Blocks screenshots, screen recording, and the recents preview inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
+    <string name="settings_unlock_confirmation_title">Require confirmation</string>
+    <string name="settings_unlock_confirmation_summary">Add a confirm step after passive unlock like face so a locked app opens only when you tap to confirm</string>
     <string name="settings_prevent_uninstall_title">Prevent uninstall</string>
     <string name="settings_prevent_uninstall_summary">Blocks uninstall attempts. Disable the module in your Xposed manager and reboot to uninstall it.</string>
     <string name="settings_self_lock_title">Require biometric unlock</string>

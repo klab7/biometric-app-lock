@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.ScreenLockPortrait
 import androidx.compose.material.icons.outlined.Screenshot
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -285,7 +286,7 @@ fun SettingsScreen(
                     icon = Icons.Outlined.Screenshot,
                     title = stringResource(R.string.settings_block_screenshots_title),
                     summary = stringResource(R.string.settings_block_screenshots_summary),
-                    position = SectionPosition.Bottom,
+                    position = SectionPosition.Middle,
                     onClick = {
                         app.prefsRepository.save(
                             Prefs.BLOCK_SCREENSHOTS,
@@ -294,6 +295,23 @@ fun SettingsScreen(
                     },
                     trailing = {
                         LockSwitch(checked = prefs.blockScreenshots, onCheckedChange = null)
+                    },
+                )
+            }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.TouchApp,
+                    title = stringResource(R.string.settings_unlock_confirmation_title),
+                    summary = stringResource(R.string.settings_unlock_confirmation_summary),
+                    position = SectionPosition.Bottom,
+                    onClick = {
+                        app.prefsRepository.save(
+                            Prefs.UNLOCK_REQUIRE_CONFIRMATION,
+                            !prefs.unlockRequireConfirmation,
+                        )
+                    },
+                    trailing = {
+                        LockSwitch(checked = prefs.unlockRequireConfirmation, onCheckedChange = null)
                     },
                 )
             }
@@ -435,7 +453,7 @@ fun SettingsScreen(
                     icon = Icons.Outlined.NewReleases,
                     title = stringResource(R.string.about_whats_new_title),
                     summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
-                    position = SectionPosition.Top,
+                    position = SectionPosition.Single,
                     onClick = { showWhatsNew = true },
                 )
             }
@@ -451,7 +469,7 @@ fun SettingsScreen(
                                 R.string.about_send_logs_summary
                             },
                         ),
-                    position = SectionPosition.Middle,
+                    position = SectionPosition.Single,
                     enabled = rootGranted != false,
                     onClick = { showLogActions = true },
                 )
@@ -461,7 +479,7 @@ fun SettingsScreen(
                     icon = Icons.Outlined.Info,
                     title = stringResource(R.string.settings_about_entry),
                     summary = stringResource(R.string.settings_about_entry_summary),
-                    position = SectionPosition.Bottom,
+                    position = SectionPosition.Single,
                     onClick = onNavigateToAbout,
                 )
             }

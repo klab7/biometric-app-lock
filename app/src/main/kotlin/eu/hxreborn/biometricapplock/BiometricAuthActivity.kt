@@ -8,6 +8,7 @@ import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
+import eu.hxreborn.biometricapplock.prefs.Prefs
 import eu.hxreborn.biometricapplock.util.pickAuthenticators
 
 private const val TAG = "BiometricAppLock"
@@ -51,12 +52,14 @@ class BiometricAuthActivity : Activity() {
         }
         val cancellation = CancellationSignal()
         val executor = mainExecutor
+        val requireConfirmation =
+            App.from(this).prefsRepository.read(Prefs.UNLOCK_REQUIRE_CONFIRMATION)
 
         val builder =
             BiometricPrompt
                 .Builder(this)
                 .setTitle(title)
-                .setConfirmationRequired(false)
+                .setConfirmationRequired(requireConfirmation)
                 .setAllowedAuthenticators(authenticators)
         if (authenticators and Authenticators.DEVICE_CREDENTIAL == 0) {
             builder.setNegativeButton(getString(android.R.string.cancel), executor) { _, _ ->

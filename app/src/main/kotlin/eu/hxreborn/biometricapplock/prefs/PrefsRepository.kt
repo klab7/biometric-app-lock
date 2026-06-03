@@ -17,6 +17,7 @@ data class AppPrefs(
     val relockOnScreenOff: Boolean,
     val relockOnTaskRemoved: Boolean,
     val blockScreenshots: Boolean,
+    val unlockRequireConfirmation: Boolean,
     val preventModuleUninstall: Boolean,
     val selfLock: Boolean,
     val autoCheckUpdate: Boolean,
@@ -32,6 +33,7 @@ data class AppPrefs(
                 relockOnScreenOff = true,
                 relockOnTaskRemoved = true,
                 blockScreenshots = false,
+                unlockRequireConfirmation = false,
                 preventModuleUninstall = false,
                 selfLock = false,
                 autoCheckUpdate = true,
@@ -56,6 +58,7 @@ class PrefsRepository(
                         relockOnScreenOff = Prefs.RELOCK_ON_SCREEN_OFF.read(local),
                         relockOnTaskRemoved = Prefs.RELOCK_ON_TASK_REMOVED.read(local),
                         blockScreenshots = Prefs.BLOCK_SCREENSHOTS.read(local),
+                        unlockRequireConfirmation = Prefs.UNLOCK_REQUIRE_CONFIRMATION.read(local),
                         preventModuleUninstall = Prefs.PREVENT_MODULE_UNINSTALL.read(local),
                         selfLock = Prefs.SELF_LOCK.read(local),
                         autoCheckUpdate = Prefs.AUTO_CHECK_UPDATE.read(local),
@@ -97,6 +100,7 @@ class PrefsRepository(
                 Prefs.all.forEach { spec ->
                     if (spec === Prefs.LAST_REMOTE_WRITE) return@forEach
                     if (spec === Prefs.SELF_LOCK) return@forEach
+                    if (spec === Prefs.UNLOCK_REQUIRE_CONFIRMATION) return@forEach
                     if (spec.copyIfChanged(local, remote, this)) changed = true
                 }
 

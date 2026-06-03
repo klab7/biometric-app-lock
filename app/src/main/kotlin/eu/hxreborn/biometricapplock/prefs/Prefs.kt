@@ -10,6 +10,7 @@ object Prefs {
     val RELOCK_ON_SCREEN_OFF = BoolPref("relock_on_screen_off", true)
     val RELOCK_ON_TASK_REMOVED = BoolPref("relock_on_task_removed", true)
     val BLOCK_SCREENSHOTS = BoolPref("block_screenshots", false)
+    val UNLOCK_REQUIRE_CONFIRMATION = BoolPref("unlock_require_confirmation", false)
     val PREVENT_MODULE_UNINSTALL = BoolPref("prevent_module_uninstall", false)
     val SELF_LOCK = BoolPref("self_lock", false)
 
@@ -36,6 +37,7 @@ object Prefs {
             RELOCK_ON_SCREEN_OFF,
             RELOCK_ON_TASK_REMOVED,
             BLOCK_SCREENSHOTS,
+            UNLOCK_REQUIRE_CONFIRMATION,
             PREVENT_MODULE_UNINSTALL,
             SELF_LOCK,
             LAST_REMOTE_WRITE,
