@@ -92,6 +92,7 @@
     <string name="settings_self_lock_summary">Require biometric or device credential to open module settings</string>
     <string name="uninstall_blocked_toast">This app is protected and can\'t be uninstalled</string>
 
+    <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_about">About</string>
     <string name="settings_about_entry">About</string>
     <string name="settings_about_entry_summary">App info and source</string>

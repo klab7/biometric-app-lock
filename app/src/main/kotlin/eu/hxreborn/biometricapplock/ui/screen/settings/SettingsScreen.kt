@@ -447,16 +447,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { SettingsSectionHeader(title = stringResource(R.string.settings_about)) }
-            item {
-                PreferenceRow(
-                    icon = Icons.Outlined.NewReleases,
-                    title = stringResource(R.string.about_whats_new_title),
-                    summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
-                    position = SectionPosition.Single,
-                    onClick = { showWhatsNew = true },
-                )
-            }
+            item { SettingsSectionHeader(title = stringResource(R.string.settings_diagnostics)) }
             item {
                 PreferenceRow(
                     icon = Icons.Outlined.Share,
@@ -474,12 +465,23 @@ fun SettingsScreen(
                     onClick = { showLogActions = true },
                 )
             }
+
+            item { SettingsSectionHeader(title = stringResource(R.string.settings_about)) }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.NewReleases,
+                    title = stringResource(R.string.about_whats_new_title),
+                    summary = stringResource(R.string.about_whats_new_summary, BuildConfig.VERSION_NAME),
+                    position = SectionPosition.Top,
+                    onClick = { showWhatsNew = true },
+                )
+            }
             item {
                 PreferenceRow(
                     icon = Icons.Outlined.Info,
                     title = stringResource(R.string.settings_about_entry),
                     summary = stringResource(R.string.settings_about_entry_summary),
-                    position = SectionPosition.Single,
+                    position = SectionPosition.Bottom,
                     onClick = onNavigateToAbout,
                 )
             }
