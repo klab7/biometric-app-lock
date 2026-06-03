@@ -197,12 +197,14 @@
         <item quantity="other">%1$d changes</item>
     </plurals>
 
-    <string name="about_send_logs_title">Share logs</string>
-    <string name="about_send_logs_summary">Exports module logs as a text file. Reproduce the issue first, then attach to a GitHub issue, send via email, or share via Telegram</string>
-    <string name="about_send_logs_no_root">Exports module logs as a text file. Reproduce the issue first, then attach to a GitHub issue, send via email, or share via Telegram. Requires root</string>
+    <string name="about_send_logs_title">Export logs</string>
+    <string name="about_send_logs_summary">Saves module logs as a text file. Reproduce the issue first, then attach to a GitHub issue, send via email, or share via Telegram</string>
+    <string name="about_send_logs_no_root">Saves module logs as a text file. Reproduce the issue first, then attach to a GitHub issue, send via email, or share via Telegram. Requires root</string>
+    <string name="logs_sheet_save">Save logs</string>
+    <string name="logs_sheet_send">Send logs</string>
+    <string name="logs_saved">Logs saved</string>
+    <string name="logs_save_failed">Couldn\'t save logs</string>
     <string name="diagnostics_share_title">Share logs</string>
-    <string name="diagnostics_share_body">Logs attached. Describe what went wrong and how to reproduce it.</string>
-    <string name="diagnostics_collecting">Collecting logs…</string>
     <string name="diagnostics_no_root">Root unavailable. LSPosed logs may be missing.</string>
     <string name="diagnostics_no_logs">No logs found. Reproduce the issue, then try again.</string>
 </resources>

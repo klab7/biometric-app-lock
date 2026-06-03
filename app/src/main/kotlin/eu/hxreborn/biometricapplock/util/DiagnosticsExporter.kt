@@ -3,6 +3,7 @@ package eu.hxreborn.biometricapplock.util
 import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
 import eu.hxreborn.biometricapplock.BuildConfig
@@ -44,6 +45,21 @@ object DiagnosticsExporter {
             }
         }
 
+    // SAF write to a user-picked location keeps the export permission-free
+    suspend fun saveTo(
+        context: Context,
+        file: File,
+        destination: Uri,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openOutputStream(destination)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                } ?: return@withContext false
+                true
+            }.getOrDefault(false)
+        }
+
     fun share(
         context: Context,
         file: File,
@@ -55,7 +71,6 @@ object DiagnosticsExporter {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(Intent.EXTRA_EMAIL, arrayOf(CONTACT_EMAIL))
                 putExtra(Intent.EXTRA_SUBJECT, "BiometricAppLock ${BuildConfig.VERSION_NAME} logs")
-                putExtra(Intent.EXTRA_TEXT, context.getString(R.string.diagnostics_share_body))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
         context.startActivity(

@@ -65,6 +65,8 @@ object Tokens {
     val SheetSectionSpacing: Dp = 20.dp
     val SheetItemSpacing: Dp = 12.dp
     val PrimaryActionHeight: Dp = 56.dp
+    val LogActionButtonSize: Dp = 64.dp
+    val LogActionSpacing: Dp = 40.dp
     val DetailHeaderIconSize: Dp = 48.dp
     val DetailHeaderCardPadding: Dp = 16.dp
     val DetailHeaderIconTextSpacing: Dp = 16.dp

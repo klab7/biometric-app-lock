@@ -4,6 +4,8 @@
 package eu.hxreborn.biometricapplock.ui.screen.settings
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,6 +59,7 @@ import eu.hxreborn.biometricapplock.prefs.ThemeMode
 import eu.hxreborn.biometricapplock.ui.component.ExpandedTitle
 import eu.hxreborn.biometricapplock.ui.component.FeatureSheetItem
 import eu.hxreborn.biometricapplock.ui.component.LockSwitch
+import eu.hxreborn.biometricapplock.ui.component.LogActionsSheet
 import eu.hxreborn.biometricapplock.ui.component.SectionPosition
 import eu.hxreborn.biometricapplock.ui.component.WhatsNewSheet
 import eu.hxreborn.biometricapplock.ui.component.changeTypeLabelRes
@@ -70,6 +73,7 @@ import eu.hxreborn.biometricapplock.updates.UpdateSheetState
 import eu.hxreborn.biometricapplock.util.DiagnosticsExporter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun SettingsScreen(
@@ -88,7 +92,25 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showRelockDialog by remember { mutableStateOf(false) }
     var showWhatsNew by remember { mutableStateOf(false) }
+    var showLogActions by remember { mutableStateOf(false) }
+    var pendingSaveFile by remember { mutableStateOf<File?>(null) }
     var launcherIconHidden by remember { mutableStateOf(!LauncherIconHelper.isLauncherIconVisible(context)) }
+
+    val saveLogsLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            val file = pendingSaveFile
+            pendingSaveFile = null
+            if (uri == null || file == null) return@rememberLauncherForActivityResult
+            coroutineScope.launch {
+                val saved = DiagnosticsExporter.saveTo(context, file, uri)
+                Toast
+                    .makeText(
+                        context,
+                        if (saved) R.string.logs_saved else R.string.logs_save_failed,
+                        Toast.LENGTH_LONG,
+                    ).show()
+            }
+        }
 
     if (showThemeDialog) {
         ThemeDialog(
@@ -134,6 +156,33 @@ fun SettingsScreen(
             items = whatsNewItems,
             versionLabel = BuildConfig.VERSION_NAME,
             onDismiss = { showWhatsNew = false },
+        )
+    }
+
+    if (showLogActions) {
+        val frameworkLabel = framework?.let { "${it.name} ${it.version}" }
+        val collect: suspend ((File) -> Unit) -> Boolean = { onCollected ->
+            try {
+                onCollected(DiagnosticsExporter.export(context, frameworkLabel))
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                Toast.makeText(context, R.string.diagnostics_no_logs, Toast.LENGTH_LONG).show()
+                false
+            }
+        }
+        LogActionsSheet(
+            onSave = {
+                collect { file ->
+                    pendingSaveFile = file
+                    saveLogsLauncher.launch(file.name)
+                }
+            },
+            onSend = {
+                collect { file -> DiagnosticsExporter.share(context, file) }
+            },
+            onDismiss = { showLogActions = false },
         )
     }
 
@@ -357,24 +406,7 @@ fun SettingsScreen(
                         ),
                     position = SectionPosition.Middle,
                     enabled = rootGranted != false,
-                    onClick = {
-                        val frameworkLabel = framework?.let { "${it.name} ${it.version}" }
-                        Toast
-                            .makeText(context, R.string.diagnostics_collecting, Toast.LENGTH_SHORT)
-                            .show()
-                        coroutineScope.launch {
-                            try {
-                                val file = DiagnosticsExporter.export(context, frameworkLabel)
-                                DiagnosticsExporter.share(context, file)
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (_: Exception) {
-                                Toast
-                                    .makeText(context, R.string.diagnostics_no_logs, Toast.LENGTH_LONG)
-                                    .show()
-                            }
-                        }
-                    },
+                    onClick = { showLogActions = true },
                 )
             }
             item {
