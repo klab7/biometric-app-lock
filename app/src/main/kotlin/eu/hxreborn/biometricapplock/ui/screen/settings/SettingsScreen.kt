@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FormatPaint
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.RoundedCorner
@@ -274,25 +273,10 @@ fun SettingsScreen(
             item { SettingsSectionHeader(title = stringResource(R.string.settings_protection)) }
             item {
                 PreferenceRow(
-                    icon = Icons.Outlined.Layers,
-                    title = stringResource(R.string.settings_hide_recents_preview_title),
-                    summary = stringResource(R.string.settings_hide_recents_preview_summary),
-                    position = SectionPosition.Top,
-                    enabled = false,
-                    trailing = {
-                        LockSwitch(
-                            checked = false,
-                            onCheckedChange = null,
-                        )
-                    },
-                )
-            }
-            item {
-                PreferenceRow(
                     icon = Icons.Outlined.AppBlocking,
                     title = stringResource(R.string.settings_prevent_uninstall_title),
                     summary = stringResource(R.string.settings_prevent_uninstall_summary),
-                    position = SectionPosition.Middle,
+                    position = SectionPosition.Top,
                     onClick = {
                         app.prefsRepository.save(
                             Prefs.PREVENT_MODULE_UNINSTALL,

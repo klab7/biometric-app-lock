@@ -5,55 +5,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Handler
-import android.os.SystemClock
 import eu.hxreborn.biometricapplock.BiometricAuthActivity
 import eu.hxreborn.biometricapplock.util.Logger
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
-private const val TOKEN_TTL_MS = 2 * 60 * 1000L
-
-private val pendingTokens = ConcurrentHashMap<String, Long>()
-
-// keep the exact launch we gated so auth resumes it instead of a rebuilt one
-private val pendingLaunches = ConcurrentHashMap<String, Intent>()
-
-private fun mintToken(): String {
-    sweepExpiredTokens()
-    val token = UUID.randomUUID().toString()
-    pendingTokens[token] = SystemClock.elapsedRealtime()
-    return token
-}
-
-private fun sweepExpiredTokens() {
-    val cutoff = SystemClock.elapsedRealtime() - TOKEN_TTL_MS
-    pendingTokens.entries.removeIf { it.value < cutoff }
-    pendingLaunches.keys.retainAll(pendingTokens.keys)
-}
-
-private fun discardToken(token: String) {
-    pendingTokens.remove(token)
-    pendingLaunches.remove(token)
-}
-
-private fun consumeToken(token: String): Boolean {
-    val issuedAt = pendingTokens.remove(token) ?: return false
-    return SystemClock.elapsedRealtime() - issuedAt <= TOKEN_TTL_MS
-}
-
-internal fun takePendingLaunch(token: String): Intent? = pendingLaunches.remove(token)
-
-internal fun isValidAuthToken(
+// consumes the auth token and unlocks the package, returning the entry to resume; null when this
+// is not a valid auth pass
+internal fun resolveAuthToken(
     intent: Intent?,
     packageName: String?,
-): Boolean {
-    val token = intent?.getStringExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN) ?: return false
-    val pkg = packageName ?: return false
-    if (pkg !in lockedPackages || !consumeToken(token)) return false
+): PendingAuth? {
+    val token = intent?.getStringExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN) ?: return null
+    val pkg = packageName ?: return null
+    if (pkg !in lockedPackages) return null
+    val entry = consumeToken(token) ?: return null
     intent.removeExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN)
     addUnlocked(pkg)
     Logger.info("unlocked pkg=$pkg")
-    return true
+    return entry
 }
 
 internal fun tryRedirect(
@@ -62,66 +30,53 @@ internal fun tryRedirect(
     className: String,
 ): Boolean {
     val reflection = reflection ?: return false
-    val token = mintToken()
+    val token = createToken()
 
-    runCatching { applyRedirect(reflection, interceptor, packageName, className, token) }
-        .onFailure {
+    val redirected =
+        runCatching {
+            val originalIntent =
+                runCatching { reflection.intentField.get(interceptor) as? Intent }.getOrNull()
+            val activityTaskSupervisor = reflection.supervisorField.get(interceptor)
+            val realPid = reflection.realCallingPidField.getInt(interceptor)
+            val realUid = reflection.realCallingUidField.getInt(interceptor)
+            val userId = reflection.userIdField.getInt(interceptor)
+            val startFlags = reflection.startFlagsField.getInt(interceptor)
+
+            val authIntent = buildAuthIntent(packageName, token)
+            originalIntent?.let { stashLaunch(token, it) }
+
+            val resolveArgs =
+                if (reflection.resolveIntent.parameterCount >= 6) {
+                    // A14+ (API 34+) takes a trailing callingPid arg
+                    arrayOf(authIntent, null, userId, 0, realUid, realPid)
+                } else {
+                    // A13 (API 33) has no callingPid arg
+                    arrayOf(authIntent, null, userId, 0, realUid)
+                }
+            val resolvedInfo = reflection.resolveIntent.invoke(activityTaskSupervisor, *resolveArgs)
+            val activityInfo =
+                reflection.resolveActivity.invoke(
+                    activityTaskSupervisor,
+                    authIntent,
+                    resolvedInfo,
+                    startFlags,
+                    null,
+                ) as? ActivityInfo
+                    ?: error("BiometricAuthActivity not resolvable: PackageManager not ready")
+
+            reflection.intentField.set(interceptor, authIntent)
+            reflection.resolvedInfoField.set(interceptor, resolvedInfo)
+            reflection.activityInfoField.set(interceptor, activityInfo)
+            reflection.callingPidField.setInt(interceptor, realPid)
+            reflection.callingUidField.setInt(interceptor, realUid)
+            reflection.resolvedTypeField.set(interceptor, null)
+        }.onFailure {
             discardToken(token)
             Logger.error("redirect failed: ${it.message}", it)
-            return false
-        }
+        }.isSuccess
 
-    Logger.info("redirected pkg=$packageName comp=$className")
-    return true
-}
-
-private fun applyRedirect(
-    reflection: SystemServerReflection,
-    interceptor: Any,
-    targetPackageName: String,
-    targetClassName: String,
-    token: String,
-) {
-    val originalIntent =
-        runCatching {
-            reflection.intentField.get(
-                interceptor,
-            ) as? Intent
-        }.getOrNull()
-    val activityTaskSupervisor = reflection.supervisorField.get(interceptor)
-    val realPid = reflection.realCallingPidField.getInt(interceptor)
-    val realUid = reflection.realCallingUidField.getInt(interceptor)
-    val userId = reflection.userIdField.getInt(interceptor)
-    val startFlags = reflection.startFlagsField.getInt(interceptor)
-
-    val authIntent = buildAuthIntent(targetPackageName, targetClassName, token)
-
-    originalIntent?.let { pendingLaunches[token] = Intent(it) }
-    val resolveArgs =
-        if (reflection.resolveIntent.parameterCount >= 6) {
-            // A14+ (API 34+) takes a trailing callingPid arg
-            arrayOf(authIntent, null, userId, 0, realUid, realPid)
-        } else {
-            // A13 (API 33) has no callingPid arg
-            arrayOf(authIntent, null, userId, 0, realUid)
-        }
-    val resolvedInfo = reflection.resolveIntent.invoke(activityTaskSupervisor, *resolveArgs)
-    val activityInfo =
-        reflection.resolveActivity.invoke(
-            activityTaskSupervisor,
-            authIntent,
-            resolvedInfo,
-            startFlags,
-            null,
-        ) as? ActivityInfo
-            ?: error("BiometricAuthActivity not resolvable: PackageManager not ready")
-
-    reflection.intentField.set(interceptor, authIntent)
-    reflection.resolvedInfoField.set(interceptor, resolvedInfo)
-    reflection.activityInfoField.set(interceptor, activityInfo)
-    reflection.callingPidField.setInt(interceptor, realPid)
-    reflection.callingUidField.setInt(interceptor, realUid)
-    reflection.resolvedTypeField.set(interceptor, null)
+    if (redirected) Logger.info("redirected pkg=$packageName comp=$className")
+    return redirected
 }
 
 // system_server can start non-exported targets and launch without the app-process restrictions
@@ -132,8 +87,12 @@ internal fun resumeOriginalLaunch(original: Intent) {
     val context = reflection.contextField.get(atms) as? Context ?: return
     val launch = Intent(original).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
     handler.post {
-        runCatching { context.startActivity(launch) }
-            .onFailure { Logger.error("resume launch failed: ${it.message}", it) }
+        runCatching { context.startActivity(launch) }.onFailure {
+            Logger.error(
+                "resume launch failed: ${it.message}",
+                it,
+            )
+        }
     }
 }
 
@@ -147,28 +106,24 @@ internal fun postAuthLaunch(
     val handler = reflection.handlerField.get(activityTaskManagerService) as Handler
     val context = reflection.contextField.get(activityTaskManagerService) as Context
 
-    val token = mintToken()
-    // cached top often isn't exported, launcher intent always is
-    val intent = buildAuthIntent(entry.packageName, null, token)
+    val token = createToken()
+    val intent = buildAuthIntent(entry.packageName, token)
 
     handler.post {
-        runCatching { context.startActivity(intent) }
-            .onFailure {
-                pendingTokens.remove(token)
-                Logger.error("posted auth launch failed: ${it.message}", it)
-            }
+        runCatching { context.startActivity(intent) }.onFailure {
+            discardToken(token)
+            Logger.error("posted auth launch failed: ${it.message}", it)
+        }
     }
 }
 
 private fun buildAuthIntent(
     targetPackageName: String,
-    targetClassName: String?,
     token: String,
 ) = Intent().apply {
     component =
         ComponentName(BiometricAuthActivity.MODULE_PACKAGE, BiometricAuthActivity.AUTH_ACTIVITY)
     putExtra(BiometricAuthActivity.EXTRA_TARGET_PKG, targetPackageName)
-    if (targetClassName != null) putExtra(BiometricAuthActivity.EXTRA_TARGET_CLS, targetClassName)
     putExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN, token)
     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 }

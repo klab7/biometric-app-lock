@@ -19,7 +19,7 @@ internal fun ClassLoader.findMethod(
     val cls = loadClass(className)
     val named = cls.declaredMethods.filter { it.name == methodName }
     named.firstOrNull { it.parameterCount == argCount }?.let { return it }
-    // no overload matches the expected arg count on this build, so take the widest one
+    // take the widest overload when nothing matches the exact arg count
     named.maxByOrNull { it.parameterCount }?.let {
         Logger.warn(
             "$className.$methodName arg count drift expected=$argCount " +

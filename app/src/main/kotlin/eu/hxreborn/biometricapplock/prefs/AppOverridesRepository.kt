@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.callbackFlow
 data class AppOverrides(
     val relockDelaySeconds: Int?,
     val blockScreenshots: Boolean?,
-    val hideRecentsPreview: Boolean?,
 )
 
 private fun SharedPreferences.getIntOrNull(key: String): Int? =
@@ -26,15 +25,12 @@ class AppOverridesRepository(
 
     private fun blockScreenshotsKey(pkg: String) = "app_override:$pkg:block_screenshots"
 
-    private fun hideRecentsPreviewKey(pkg: String) = "app_override:$pkg:hide_recents_preview"
-
     private fun prefix(pkg: String) = "app_override:$pkg:"
 
     private fun currentOverrides(pkg: String) =
         AppOverrides(
             relockDelaySeconds = local.getIntOrNull(relockKey(pkg)),
             blockScreenshots = local.getBooleanOrNull(blockScreenshotsKey(pkg)),
-            hideRecentsPreview = local.getBooleanOrNull(hideRecentsPreviewKey(pkg)),
         )
 
     fun observe(pkg: String): Flow<AppOverrides> =
@@ -74,19 +70,10 @@ class AppOverridesRepository(
         editLocalAndRemote { if (blocked == null) remove(key) else putBoolean(key, blocked) }
     }
 
-    fun setHideRecentsPreview(
-        pkg: String,
-        hidden: Boolean?,
-    ) {
-        val key = hideRecentsPreviewKey(pkg)
-        editLocalAndRemote { if (hidden == null) remove(key) else putBoolean(key, hidden) }
-    }
-
     fun reset(pkg: String) =
         editLocalAndRemote {
             remove(relockKey(pkg))
             remove(blockScreenshotsKey(pkg))
-            remove(hideRecentsPreviewKey(pkg))
         }
 
     fun prune(installedPackages: Set<String>) {

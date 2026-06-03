@@ -11,7 +11,6 @@ internal const val RELOCK_DELAY_NEVER = -1
 
 internal data class TaskEntry(
     val packageName: String,
-    val topActivityClassName: String,
 )
 
 @Volatile

@@ -109,7 +109,6 @@ class BiometricAuthActivity : Activity() {
         const val AUTH_ACTIVITY = "$MODULE_PACKAGE.BiometricAuthActivity"
 
         const val EXTRA_TARGET_PKG = "$MODULE_PACKAGE.TARGET_PKG"
-        const val EXTRA_TARGET_CLS = "$MODULE_PACKAGE.TARGET_CLS"
         const val EXTRA_AUTH_TOKEN = "$MODULE_PACKAGE.AUTH_TOKEN"
 
         private const val AUTH_OK = 1

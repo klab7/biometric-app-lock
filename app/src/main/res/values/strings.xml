@@ -81,9 +81,7 @@
     <string name="settings_relock_task_removed_summary">Locks a protected app again when its task is swiped off the recents screen</string>
 
     <string name="settings_block_screenshots_title">Block screenshots</string>
-    <string name="settings_block_screenshots_summary">Prevents screenshots and screen recording inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
-    <string name="settings_hide_recents_preview_title">Hide preview in recents</string>
-    <string name="settings_hide_recents_preview_summary">Hides the app\'s preview in recents while it\'s locked</string>
+    <string name="settings_block_screenshots_summary">Blocks screenshots, screen recording, and the recents preview inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
     <string name="settings_prevent_uninstall_title">Prevent uninstall</string>
     <string name="settings_prevent_uninstall_summary">Blocks uninstall attempts. Disable the module in your Xposed manager and reboot to uninstall it.</string>
     <string name="uninstall_blocked_toast">This app is protected and can\'t be uninstalled</string>
@@ -130,9 +128,7 @@
 
 
     <string name="app_detail_block_screenshots_title">Block screenshots</string>
-    <string name="app_detail_block_screenshots_summary">Prevents screenshots and screen recording inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
-    <string name="app_detail_hide_recents_preview_title">Hide preview in recents</string>
-    <string name="app_detail_hide_recents_preview_summary">Hides the app\'s preview in recents while it\'s locked</string>
+    <string name="app_detail_block_screenshots_summary">Blocks screenshots, screen recording, and the recents preview inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
 
     <string name="app_detail_section_advanced">Advanced</string>
     <string name="app_detail_open_app_info_title">Open system app info</string>

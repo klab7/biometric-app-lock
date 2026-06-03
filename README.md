@@ -49,9 +49,9 @@ Toggle in Settings → Privacy & stealth. While on, the module blocks every atte
 
 ## Reporting issues
 
-Settings → About → Share logs exports the module's log lines as a text file and opens a share sheet. Reproduce the issue first, then share via [email](mailto:hxreborn@duck.com), [GitHub issue](https://github.com/hxreborn/biometric-app-lock/issues/new), or [Telegram](https://t.me/hxreb0rn).
+Settings → About → Export logs saves the module's log lines to a text file and opens a share sheet, so you can attach them to a [GitHub issue](https://github.com/hxreborn/biometric-app-lock/issues/new), send them by [email](mailto:hxreborn@duck.com), or share via [Telegram](https://t.me/hxreb0rn). Reproduce the issue first, then export.
 
-Root is required to read the LSPosed logs. If unavailable, the row is disabled. Only this module's own log lines are exported — no other data is gathered. Debug builds are the most useful for diagnosing issues.
+Reading the LSPosed logs needs root, so the row is disabled without it. Only this module's own log lines are exported, nothing else from your device, so they're safe to attach to a public issue. Debug builds capture the most detail.
 
 ## License
 

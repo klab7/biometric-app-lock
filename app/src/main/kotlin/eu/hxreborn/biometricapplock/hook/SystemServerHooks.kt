@@ -57,8 +57,12 @@ internal fun refreshSecureSurfaces() {
     val rwc = r.rootWindowContainerField.get(atms) ?: return
     val handler = r.handlerField.get(atms) as? Handler ?: return
     handler.post {
-        runCatching { r.refreshSecureSurfaceState.invoke(rwc) }
-            .onFailure { Logger.warn("refreshSecureSurfaceState failed: ${it.message}", it) }
+        runCatching { r.refreshSecureSurfaceState.invoke(rwc) }.onFailure {
+            Logger.warn(
+                "refreshSecureSurfaceState failed: ${it.message}",
+                it,
+            )
+        }
     }
 }
 
@@ -70,8 +74,12 @@ internal fun XposedModule.registerSystemServerHooks(
     Logger.info("registering system_server hooks sdk=${Build.VERSION.SDK_INT}")
     reflection =
         runCatching { SystemServerReflection(classLoader) }
-            .onFailure { Logger.error("reflection init failed: ${it.message}", it) }
-            .getOrNull()
+            .onFailure {
+                Logger.error(
+                    "reflection init failed: ${it.message}",
+                    it,
+                )
+            }.getOrNull()
 
     hookLaunchIntercept(classLoader)
     hookActivityLaunched(classLoader)
@@ -124,10 +132,8 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
                 11,
             )
         // resolve indices once at install time so a future arg shift can't desync the hot path
-        val intentIdx =
-            method.firstArgIndexOfType("Intent").let { if (it >= 0) it else 0 }
-        val actInfoIdx =
-            method.firstArgIndexOfType("ActivityInfo").let { if (it >= 0) it else 2 }
+        val intentIdx = method.firstArgIndexOfType("Intent").let { if (it >= 0) it else 0 }
+        val actInfoIdx = method.firstArgIndexOfType("ActivityInfo").let { if (it >= 0) it else 2 }
         Logger.info(
             "intercept indices intent=$intentIdx aInfo=$actInfoIdx args=${method.parameterCount}",
         )
@@ -141,11 +147,10 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
             val activityInfo = chain.args[actInfoIdx] as? ActivityInfo
             val packageName = activityInfo?.packageName
 
-            val authToken = intent?.getStringExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN)
-            if (isValidAuthToken(intent, packageName)) {
-                val original = authToken?.let { takePendingLaunch(it) }
+            val auth = resolveAuthToken(intent, packageName)
+            if (auth != null) {
+                val original = auth.launch
                 if (original != null) {
-                    // abort this signal launch, resume the real gated intent from system_server
                     Logger.debug { "resume original pkg=$packageName" }
                     resumeOriginalLaunch(original)
                     return@intercept true
@@ -174,7 +179,7 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookLaunchIntercept failed: ${it.message}", it) }
 }
 
-// Populates taskCache so hookRecentsLaunch can map taskId to package
+// populates taskCache so the recents and task-removed hooks can map taskId to package
 private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -188,7 +193,7 @@ private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
             val topActivity = taskInfo.topActivity ?: return@intercept chain.proceed()
             val packageName = topActivity.packageName
             if (packageName in lockedPackages) {
-                taskCache[taskInfo.taskId] = TaskEntry(packageName, topActivity.className)
+                taskCache[taskInfo.taskId] = TaskEntry(packageName)
                 Logger.debug {
                     "launched pkg=$packageName taskId=${taskInfo.taskId} top=${topActivity.shortClassName}"
                 }
@@ -199,7 +204,7 @@ private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookActivityLaunched failed: ${it.message}", it) }
 }
 
-// Recents-card taps and gesture-nav switches bypass ActivityStarter
+// intercepts recents-card taps and gesture switches, which bypass ActivityStarter
 private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -217,8 +222,12 @@ private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
             if (entry != null && !isUnlocked(entry.packageName)) {
                 Logger.debug { "recents gate pkg=${entry.packageName} taskId=$taskId" }
                 val result = chain.proceed()
-                runCatching { postAuthLaunch(chain.thisObject, entry) }
-                    .onFailure { Logger.error("recents auth failed: ${it.message}", it) }
+                runCatching {
+                    postAuthLaunch(
+                        chain.thisObject,
+                        entry,
+                    )
+                }.onFailure { Logger.error("recents auth failed: ${it.message}", it) }
                 return@intercept result
             }
             if (entry != null) {
@@ -267,7 +276,7 @@ private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
     }
 }
 
-// Relocks on screen transitions
+// clears unlock state on screen off, relocks elapsed packages on wake
 private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -290,8 +299,7 @@ private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
             if (awake == true && unlockedPackages.isNotEmpty()) {
                 // screen on relocks only packages whose delay has elapsed
                 val now = SystemClock.elapsedRealtime()
-                val toRelock =
-                    unlockedPackages.filter { shouldRelockOnTransition(it, now) }.toSet()
+                val toRelock = unlockedPackages.filter { shouldRelockOnTransition(it, now) }.toSet()
                 if (toRelock.isNotEmpty()) removeFromUnlocked(toRelock)
                 Logger.debug {
                     val topPkg =
@@ -307,7 +315,7 @@ private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookScreenAwake failed: ${it.message}", it) }
 }
 
-// Force-blocks screenshots in unlocked locked apps when BLOCK_SCREENSHOTS is on
+// force-blocks screenshots in unlocked locked apps when BLOCK_SCREENSHOTS is on
 private fun XposedModule.hookFlagSecure(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -324,10 +332,7 @@ private fun XposedModule.hookFlagSecure(classLoader: ClassLoader) {
         hook(method).intercept { chain ->
             val ar = activityRecordField.get(chain.thisObject) ?: return@intercept chain.proceed()
             val pkg = packageNameField.get(ar) as? String ?: return@intercept chain.proceed()
-            if (pkg in lockedPackages &&
-                isUnlocked(pkg) &&
-                shouldBlockScreenshots(pkg)
-            ) {
+            if (pkg in lockedPackages && isUnlocked(pkg) && shouldBlockScreenshots(pkg)) {
                 Logger.debug { "flagsecure force-block pkg=$pkg" }
                 return@intercept true
             }

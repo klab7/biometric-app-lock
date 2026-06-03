@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Screenshot
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Tune
@@ -104,12 +103,11 @@ fun AppDetailScreen(
 
     val overrides by app.appOverridesRepository
         .observe(packageName)
-        .collectAsStateWithLifecycle(initialValue = AppOverrides(null, null, null))
+        .collectAsStateWithLifecycle(initialValue = AppOverrides(null, null))
 
     val hasOverrides =
         overrides.relockDelaySeconds != null ||
-            overrides.blockScreenshots != null ||
-            overrides.hideRecentsPreview != null
+            overrides.blockScreenshots != null
     val disabledModifier = if (hasOverrides) Modifier else Modifier.alpha(Tokens.DISABLED_ALPHA)
 
     var showRelockDialog by remember { mutableStateOf(false) }
@@ -228,22 +226,6 @@ fun AppDetailScreen(
                             checked = overrides.blockScreenshots == true,
                             onCheckedChange = null,
                             enabled = hasOverrides,
-                        )
-                    },
-                    modifier = disabledModifier,
-                )
-            }
-
-            item {
-                PreferenceRow(
-                    icon = Icons.Outlined.Layers,
-                    title = stringResource(R.string.app_detail_hide_recents_preview_title),
-                    summary = stringResource(R.string.app_detail_hide_recents_preview_summary),
-                    trailing = {
-                        LockSwitch(
-                            checked = false,
-                            onCheckedChange = null,
-                            enabled = false,
                         )
                     },
                     modifier = disabledModifier,
