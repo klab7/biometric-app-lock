@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AppBlocking
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.FormatPaint
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NewReleases
@@ -312,6 +313,20 @@ fun SettingsScreen(
                     },
                     trailing = {
                         LockSwitch(checked = prefs.preventModuleUninstall, onCheckedChange = null)
+                    },
+                )
+            }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.Fingerprint,
+                    title = stringResource(R.string.settings_self_lock_title),
+                    summary = stringResource(R.string.settings_self_lock_summary),
+                    position = SectionPosition.Middle,
+                    onClick = {
+                        app.prefsRepository.save(Prefs.SELF_LOCK, !prefs.selfLock)
+                    },
+                    trailing = {
+                        LockSwitch(checked = prefs.selfLock, onCheckedChange = null)
                     },
                 )
             }

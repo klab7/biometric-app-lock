@@ -11,6 +11,7 @@ object Prefs {
     val RELOCK_ON_TASK_REMOVED = BoolPref("relock_on_task_removed", true)
     val BLOCK_SCREENSHOTS = BoolPref("block_screenshots", false)
     val PREVENT_MODULE_UNINSTALL = BoolPref("prevent_module_uninstall", false)
+    val SELF_LOCK = BoolPref("self_lock", false)
 
     // hook reads this to gauge cache staleness
     val LAST_REMOTE_WRITE = LongPref("_last_remote_write", 0L)
@@ -36,6 +37,7 @@ object Prefs {
             RELOCK_ON_TASK_REMOVED,
             BLOCK_SCREENSHOTS,
             PREVENT_MODULE_UNINSTALL,
+            SELF_LOCK,
             LAST_REMOTE_WRITE,
             FLOATING_NAV_BAR,
             AUTO_CHECK_UPDATE,

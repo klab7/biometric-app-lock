@@ -18,6 +18,7 @@ data class AppPrefs(
     val relockOnTaskRemoved: Boolean,
     val blockScreenshots: Boolean,
     val preventModuleUninstall: Boolean,
+    val selfLock: Boolean,
     val autoCheckUpdate: Boolean,
     val lastDismissedAvailableVersion: String,
 ) {
@@ -32,6 +33,7 @@ data class AppPrefs(
                 relockOnTaskRemoved = true,
                 blockScreenshots = false,
                 preventModuleUninstall = false,
+                selfLock = false,
                 autoCheckUpdate = true,
                 lastDismissedAvailableVersion = "",
             )
@@ -55,6 +57,7 @@ class PrefsRepository(
                         relockOnTaskRemoved = Prefs.RELOCK_ON_TASK_REMOVED.read(local),
                         blockScreenshots = Prefs.BLOCK_SCREENSHOTS.read(local),
                         preventModuleUninstall = Prefs.PREVENT_MODULE_UNINSTALL.read(local),
+                        selfLock = Prefs.SELF_LOCK.read(local),
                         autoCheckUpdate = Prefs.AUTO_CHECK_UPDATE.read(local),
                         lastDismissedAvailableVersion =
                             Prefs.LAST_DISMISSED_AVAILABLE_VERSION.read(
@@ -93,6 +96,7 @@ class PrefsRepository(
             remote.edit(commit = false) {
                 Prefs.all.forEach { spec ->
                     if (spec === Prefs.LAST_REMOTE_WRITE) return@forEach
+                    if (spec === Prefs.SELF_LOCK) return@forEach
                     if (spec.copyIfChanged(local, remote, this)) changed = true
                 }
 

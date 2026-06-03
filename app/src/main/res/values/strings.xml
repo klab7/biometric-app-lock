@@ -86,6 +86,8 @@
     <string name="settings_block_screenshots_summary">Blocks screenshots, screen recording, and the recents preview inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
     <string name="settings_prevent_uninstall_title">Prevent uninstall</string>
     <string name="settings_prevent_uninstall_summary">Blocks uninstall attempts. Disable the module in your Xposed manager and reboot to uninstall it.</string>
+    <string name="settings_self_lock_title">Require biometric unlock</string>
+    <string name="settings_self_lock_summary">Require biometric or device credential to open module settings</string>
     <string name="uninstall_blocked_toast">This app is protected and can\'t be uninstalled</string>
 
     <string name="settings_about">About</string>
@@ -94,7 +96,7 @@
     <string name="settings_lsposed_framework">Xposed framework</string>
     <string name="settings_lsposed_framework_unbound">Not bound</string>
 
-    <string name="biometric_prompt_default_title">Unlock</string>
+    <string name="self_lock_prompt_title">Unlock</string>
     <string name="biometric_prompt_unlock_title">Unlock %1$s</string>
 
     <string name="about_title">About</string>
