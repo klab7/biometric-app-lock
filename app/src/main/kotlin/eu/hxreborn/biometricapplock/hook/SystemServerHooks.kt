@@ -36,7 +36,7 @@ private fun ensurePackageEventsRegistered() {
     registerPackageEvents(ctx, handler)
 }
 
-// show the toast on the ATMS handler thread because deletePackageX holds the PMS lock
+// toast on the ATMS handler, the PMS lock is held here
 private fun postUninstallBlockedToast() {
     val atms = atmsRef ?: return
     val r = reflection ?: return
@@ -66,6 +66,13 @@ internal fun refreshSecureSurfaces() {
     }
 }
 
+/**
+ * Wires up all the system_server hooks. A locked app can hit the foreground three ways, through
+ * two framework methods:
+ * - launcher tap, deep link, notification -> ActivityStarter.intercept ([hookLaunchIntercept])
+ * - recents card tap -> ActivityTaskSupervisor.startActivityFromRecents ([hookRecentsLaunch])
+ * - nav-bar quick switch -> ActivityTaskSupervisor.startActivityFromRecents ([hookRecentsLaunch])
+ */
 internal fun XposedModule.registerSystemServerHooks(
     classLoader: ClassLoader,
     locked: Set<String>,
@@ -90,39 +97,7 @@ internal fun XposedModule.registerSystemServerHooks(
     hookUninstall(classLoader)
 }
 
-// every user-initiated uninstall (launcher, Settings, Play Store, adb) funnels through deletePackageX
-private fun XposedModule.hookUninstall(classLoader: ClassLoader) {
-    runCatching {
-        val method =
-            classLoader.findMethod(
-                "com.android.server.pm.DeletePackageHelper",
-                "deletePackageX",
-                5,
-            )
-        hook(method).intercept { chain ->
-            // fail open so arg drift lets the delete run instead of throwing in system_server
-            val shouldBlock =
-                runCatching {
-                    val packageName = chain.args.getOrNull(0) as? String
-                    val removedBySystem = chain.args.getOrNull(4) as? Boolean
-                    packageName == BiometricAuthActivity.MODULE_PACKAGE &&
-                        removedBySystem == false &&
-                        shouldPreventModuleUninstall()
-                }.getOrDefault(false)
-
-            if (shouldBlock) {
-                Logger.info("blocked uninstall pkg=${BiometricAuthActivity.MODULE_PACKAGE}")
-                postUninstallBlockedToast()
-                // DELETE_FAILED_INTERNAL_ERROR aborts the deletion without running it
-                return@intercept -1
-            }
-            chain.proceed()
-        }
-        Logger.info("hooked deletePackageX args=${method.parameterCount}")
-    }.onFailure { Logger.warn("hookUninstall not available: ${it.message}") }
-}
-
-// ActivityStarter routes all launches through here
+// launcher path. swap the launch for the prompt, then replay the original once auth passes
 private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -131,7 +106,7 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
                 "intercept",
                 11,
             )
-        // resolve indices once at install time so a future arg shift can't desync the hot path
+        // grab the arg indices once up front, the framework likes to shuffle them between versions
         val intentIdx = method.firstArgIndexOfType("Intent").let { if (it >= 0) it else 0 }
         val actInfoIdx = method.firstArgIndexOfType("ActivityInfo").let { if (it >= 0) it else 2 }
         Logger.info(
@@ -179,7 +154,7 @@ private fun XposedModule.hookLaunchIntercept(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookLaunchIntercept failed: ${it.message}", it) }
 }
 
-// populates taskCache so the recents and task-removed hooks can map taskId to package
+// bookkeeping: taskId -> package so the recents and task-removed hooks can find it
 private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -204,7 +179,11 @@ private fun XposedModule.hookActivityLaunched(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookActivityLaunched failed: ${it.message}", it) }
 }
 
-// intercepts recents-card taps and gesture switches, which bypass ActivityStarter
+/**
+ * recents path: card taps and the nav-bar quick switch, which skip ActivityStarter.
+ * - translucent: let the task come up, then drop the prompt over it (old 1.3 behavior)
+ * - opaque: keep the task off-screen, return START_SUCCESS, let auth own the screen
+ */
 private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -214,25 +193,38 @@ private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
                 4,
             )
         hook(method).intercept { chain ->
+            val callingPid = chain.args[0] as? Int
+            val callingUid = chain.args[1] as? Int
             val taskId = chain.args[2] as? Int
             val entry = taskId?.let { taskCache[it] }
 
             relockOtherPackages(entry?.packageName)
 
             if (entry != null && !isUnlocked(entry.packageName)) {
-                Logger.debug { "recents gate pkg=${entry.packageName} taskId=$taskId" }
+                val opaque = shouldUseOpaqueUnlockPrompt()
+                Logger.debug {
+                    "recents gate pkg=${entry.packageName} taskId=$taskId pid=$callingPid " +
+                        "uid=$callingUid ${recentsGesture(chain.args.getOrNull(3))} " +
+                        "mode=${if (opaque) "block" else "surface"}"
+                }
+                if (opaque) {
+                    // don't surface the task or it steals focus from the solid prompt.
+                    // a quick switch still backgrounds the prompt though, so it self-cancels there
+                    runCatching { postAuthLaunch(chain.thisObject, entry) }
+                        .onFailure { Logger.error("recents auth failed: ${it.message}", it) }
+                    return@intercept 0
+                }
                 val result = chain.proceed()
-                runCatching {
-                    postAuthLaunch(
-                        chain.thisObject,
-                        entry,
-                    )
-                }.onFailure { Logger.error("recents auth failed: ${it.message}", it) }
+                runCatching { postAuthLaunch(chain.thisObject, entry) }
+                    .onFailure { Logger.error("recents auth failed: ${it.message}", it) }
                 return@intercept result
             }
             if (entry != null) {
                 refreshUnlock(entry.packageName)
-                Logger.debug { "recents pass pkg=${entry.packageName} taskId=$taskId" }
+                Logger.debug {
+                    "recents pass pkg=${entry.packageName} taskId=$taskId " +
+                        recentsGesture(chain.args.getOrNull(3))
+                }
             }
             chain.proceed()
         }
@@ -240,7 +232,7 @@ private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
     }.onFailure { Logger.error("hookRecentsLaunch failed: ${it.message}", it) }
 }
 
-// relock a locked task when it is swiped off recents through the cleanUpRemovedTask hook
+// drop the unlock when a locked task gets swiped off recents
 private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
     runCatching {
         val supervisorClass =
@@ -248,7 +240,7 @@ private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
                 "com.android.server.wm.ActivityTaskSupervisor",
                 "com.android.server.wm.ActivityStackSupervisor",
             )
-        // tries both removal-method names so the hook survives the A13 to A14 rename
+        // the method got renamed between A13 and A14, so try both
         val method =
             supervisorClass.declaredMethods.firstOrNull {
                 it.name == "cleanUpRemovedTask" || it.name == "cleanUpRemovedTaskLocked"
@@ -260,7 +252,7 @@ private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
                 .apply { isAccessible = true }
         hook(method).intercept { chain ->
             val result = chain.proceed()
-            // runs after proceed and lock-free to stay safe under mGlobalLock
+            // do this after proceed and off the lock, mGlobalLock is held in here
             runCatching {
                 if (!shouldRelockOnTaskRemoved()) return@runCatching
                 val taskId = chain.args.getOrNull(0)?.let { taskIdField.getInt(it) }
@@ -276,7 +268,7 @@ private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
     }
 }
 
-// clears unlock state on screen off, relocks elapsed packages on wake
+// screen off wipes unlock state, screen on relocks whatever's past its delay
 private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
     runCatching {
         val method =
@@ -288,7 +280,7 @@ private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
         hook(method).intercept { chain ->
             val awake = chain.args[0] as? Boolean
             if (awake == false) {
-                // screen off drops all unlock state so locked apps re-auth on next launch
+                // screen went off, wipe everything so locked apps ask again next time
                 if (shouldRelockOnScreenOff() && unlockedPackages.isNotEmpty()) {
                     val cleared = unlockedPackages.size
                     clearUnlocked()
@@ -297,7 +289,7 @@ private fun XposedModule.hookScreenAwake(classLoader: ClassLoader) {
                 return@intercept chain.proceed()
             }
             if (awake == true && unlockedPackages.isNotEmpty()) {
-                // screen on relocks only packages whose delay has elapsed
+                // back awake, only relock the ones past their delay
                 val now = SystemClock.elapsedRealtime()
                 val toRelock = unlockedPackages.filter { shouldRelockOnTransition(it, now) }.toSet()
                 if (toRelock.isNotEmpty()) removeFromUnlocked(toRelock)
@@ -340,4 +332,36 @@ private fun XposedModule.hookFlagSecure(classLoader: ClassLoader) {
         }
         Logger.info("hooked isSecureLocked args=${method.parameterCount}")
     }.onFailure { Logger.warn("hookFlagSecure not available: ${it.message}") }
+}
+
+// every user uninstall (launcher, Settings, Play Store, adb) ends up here at deletePackageX
+private fun XposedModule.hookUninstall(classLoader: ClassLoader) {
+    runCatching {
+        val method =
+            classLoader.findMethod(
+                "com.android.server.pm.DeletePackageHelper",
+                "deletePackageX",
+                5,
+            )
+        hook(method).intercept { chain ->
+            // fail open: if the args shifted, let the delete run instead of crashing system_server
+            val shouldBlock =
+                runCatching {
+                    val packageName = chain.args.getOrNull(0) as? String
+                    val removedBySystem = chain.args.getOrNull(4) as? Boolean
+                    packageName == BiometricAuthActivity.MODULE_PACKAGE &&
+                        removedBySystem == false &&
+                        shouldPreventModuleUninstall()
+                }.getOrDefault(false)
+
+            if (shouldBlock) {
+                Logger.info("blocked uninstall pkg=${BiometricAuthActivity.MODULE_PACKAGE}")
+                postUninstallBlockedToast()
+                // DELETE_FAILED_INTERNAL_ERROR aborts the deletion without running it
+                return@intercept -1
+            }
+            chain.proceed()
+        }
+        Logger.info("hooked deletePackageX args=${method.parameterCount}")
+    }.onFailure { Logger.warn("hookUninstall not available: ${it.message}") }
 }

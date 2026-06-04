@@ -84,8 +84,11 @@
 
     <string name="settings_block_screenshots_title">Block screenshots</string>
     <string name="settings_block_screenshots_summary">Blocks screenshots, screen recording, and the recents preview inside selected apps. May not apply if another module bypasses FLAG_SECURE</string>
+    <string name="settings_unlock_prompt">Unlock prompt</string>
     <string name="settings_unlock_confirmation_title">Require confirmation</string>
-    <string name="settings_unlock_confirmation_summary">Adds a confirm step after passive unlock like face, the Android default, so a locked app opens only after you tap to confirm</string>
+    <string name="settings_unlock_confirmation_summary">After a passive unlock like face, tap to confirm before the app opens. Android\'s default</string>
+    <string name="settings_opaque_unlock_prompt_title">Solid unlock screen</string>
+    <string name="settings_opaque_unlock_prompt_summary">Use a solid screen instead of a see-through one. Helps on phones where the prompt closes by itself or makes you retry</string>
     <string name="settings_prevent_uninstall_title">Prevent uninstall</string>
     <string name="settings_prevent_uninstall_summary">Blocks uninstall attempts. Disable the module in your Xposed manager and reboot to uninstall it.</string>
     <string name="settings_self_lock_title">Require biometric unlock</string>

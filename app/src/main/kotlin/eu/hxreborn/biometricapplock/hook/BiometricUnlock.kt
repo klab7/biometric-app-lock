@@ -8,8 +8,14 @@ import android.os.Handler
 import eu.hxreborn.biometricapplock.BiometricAuthActivity
 import eu.hxreborn.biometricapplock.util.Logger
 
-// consumes the auth token and unlocks the package, returning the entry to resume,
-// or null when this is not a valid auth pass
+// system_server and the auth activity talk through a one-time token in the launch intent, no
+// broadcasts or binder. the hook creates a token and redirects the launch to the auth activity, and a
+// good auth sends the token back so the hook knows the unlock is real and replays the original.
+
+/**
+ * The returning launch carries that token. Consume it (one-shot, so a replayed intent can't unlock
+ * again), mark the package unlocked, and hand back the stashed original to resume.
+ */
 internal fun resolveAuthToken(
     intent: Intent?,
     packageName: String?,
@@ -24,6 +30,12 @@ internal fun resolveAuthToken(
     return entry
 }
 
+/**
+ * Launcher path. Rewrite the interceptor's in-flight launch to point at the auth activity so the
+ * target never starts, and stash the exact original under the token so a good auth replays it
+ * exactly (keeps deep links and non-exported notification targets working). resolveIntent and
+ * resolveActivity still have to run or ActivityStarter has no resolved component and crashes.
+ */
 internal fun tryRedirect(
     interceptor: Any,
     packageName: String,
@@ -42,7 +54,7 @@ internal fun tryRedirect(
             val userId = reflection.userIdField.getInt(interceptor)
             val startFlags = reflection.startFlagsField.getInt(interceptor)
 
-            val authIntent = buildAuthIntent(packageName, token)
+            val authIntent = buildAuthIntent(packageName, token, shouldUseOpaqueUnlockPrompt())
             originalIntent?.let { stashLaunch(token, it) }
 
             val resolveArgs =
@@ -79,7 +91,11 @@ internal fun tryRedirect(
     return redirected
 }
 
-// system_server can start non-exported targets and launch without the app-process restrictions
+/**
+ * Replay the stashed original from the system_server context (uid 1000). That is what makes resume
+ * reliable: it holds START_ANY_ACTIVITY and skips background-launch limits, so the exact task comes
+ * forward and deep links / non-exported targets land. Post off the lock, mGlobalLock is held upstream.
+ */
 internal fun resumeOriginalLaunch(original: Intent) {
     val reflection = reflection ?: return
     val atms = atmsRef ?: return
@@ -96,6 +112,12 @@ internal fun resumeOriginalLaunch(original: Intent) {
     }
 }
 
+/**
+ * Recents path. No in-flight intent to rewrite, so just start the auth activity off the lock.
+ * Nothing gets stashed, so after auth the tokened launcher intent re-enters and opens the app fresh
+ * ([resolveAuthToken] hands back a null launch and the hook just proceeds it) instead of restoring
+ * the exact task.
+ */
 internal fun postAuthLaunch(
     activityTaskSupervisor: Any,
     entry: TaskEntry,
@@ -107,7 +129,7 @@ internal fun postAuthLaunch(
     val context = reflection.contextField.get(activityTaskManagerService) as Context
 
     val token = createToken()
-    val intent = buildAuthIntent(entry.packageName, token)
+    val intent = buildAuthIntent(entry.packageName, token, shouldUseOpaqueUnlockPrompt())
 
     handler.post {
         runCatching { context.startActivity(intent) }.onFailure {
@@ -117,12 +139,19 @@ internal fun postAuthLaunch(
     }
 }
 
+// translucent by default, opaque is the compat fallback for OEMs that cancel the see-through prompt
 private fun buildAuthIntent(
     targetPackageName: String,
     token: String,
+    opaque: Boolean,
 ) = Intent().apply {
-    component =
-        ComponentName(BiometricAuthActivity.MODULE_PACKAGE, BiometricAuthActivity.AUTH_ACTIVITY)
+    val authActivity =
+        if (opaque) {
+            BiometricAuthActivity.OPAQUE_AUTH_ACTIVITY
+        } else {
+            BiometricAuthActivity.AUTH_ACTIVITY
+        }
+    component = ComponentName(BiometricAuthActivity.MODULE_PACKAGE, authActivity)
     putExtra(BiometricAuthActivity.EXTRA_TARGET_PKG, targetPackageName)
     putExtra(BiometricAuthActivity.EXTRA_AUTH_TOKEN, token)
     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -84,6 +84,8 @@ internal fun relockOtherPackages(keepPkg: String?) {
 
 @Volatile private var globalPreventModuleUninstall: Boolean = false
 
+@Volatile private var globalUseOpaqueUnlockPrompt: Boolean = false
+
 private val appRelockOverrides = ConcurrentHashMap<String, Int>()
 
 private val appBlockScreenshotsOverrides = ConcurrentHashMap<String, Boolean>()
@@ -100,12 +102,15 @@ internal fun shouldRelockOnTaskRemoved(): Boolean = globalRelockOnTaskRemoved
 
 internal fun shouldPreventModuleUninstall(): Boolean = globalPreventModuleUninstall
 
+internal fun shouldUseOpaqueUnlockPrompt(): Boolean = globalUseOpaqueUnlockPrompt
+
 internal fun loadHookPrefs(prefs: SharedPreferences) {
     globalRelockDelaySeconds = Prefs.RELOCK_DELAY_SECONDS.read(prefs)
     globalRelockOnScreenOff = Prefs.RELOCK_ON_SCREEN_OFF.read(prefs)
     globalRelockOnTaskRemoved = Prefs.RELOCK_ON_TASK_REMOVED.read(prefs)
     globalBlockScreenshots = Prefs.BLOCK_SCREENSHOTS.read(prefs)
     globalPreventModuleUninstall = Prefs.PREVENT_MODULE_UNINSTALL.read(prefs)
+    globalUseOpaqueUnlockPrompt = Prefs.USE_OPAQUE_UNLOCK_PROMPT.read(prefs)
     appRelockOverrides.clear()
     appBlockScreenshotsOverrides.clear()
     prefs.all.keys.forEach { key ->
@@ -128,6 +133,7 @@ internal fun loadHookPrefs(prefs: SharedPreferences) {
             "relockOnTaskRemoved=$globalRelockOnTaskRemoved " +
             "blockScreenshots=$globalBlockScreenshots " +
             "preventUninstall=$globalPreventModuleUninstall " +
+            "opaquePrompt=$globalUseOpaqueUnlockPrompt " +
             "relockOverrides=${appRelockOverrides.size} " +
             "blockOverrides=${appBlockScreenshotsOverrides.size}"
     }

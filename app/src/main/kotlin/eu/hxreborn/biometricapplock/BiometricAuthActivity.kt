@@ -13,7 +13,12 @@ import eu.hxreborn.biometricapplock.util.pickAuthenticators
 
 private const val TAG = "BiometricAppLock"
 
-class BiometricAuthActivity : Activity() {
+/**
+ * Thin activity the hook redirects locked launches to. Runs the system BiometricPrompt and, once it
+ * passes, sends a one-time token back so the hook resumes the real launch. Translucent by default.
+ * [OpaqueAuthActivity] is the solid variant for OEMs that cancel the see-through prompt.
+ */
+open class BiometricAuthActivity : Activity() {
     private var targetPkg: String? = null
     private var authToken: String? = null
     private var replied = false
@@ -28,7 +33,7 @@ class BiometricAuthActivity : Activity() {
             finish()
             return
         }
-        Log.i(TAG, "gating $targetPkg")
+        Log.i(TAG, "gating $targetPkg via=${javaClass.simpleName}")
         val pkg = targetPkg ?: return
         val label =
             runCatching {
@@ -38,6 +43,7 @@ class BiometricAuthActivity : Activity() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "onDestroy replied=$replied pkg=$targetPkg")
         if (!replied) onResult(AUTH_CANCELLED)
         super.onDestroy()
     }
@@ -84,13 +90,19 @@ class BiometricAuthActivity : Activity() {
                     override fun onAuthenticationError(
                         errorCode: Int,
                         errString: CharSequence,
-                    ) = onResult(AUTH_ERROR)
+                    ) {
+                        Log.w(TAG, "auth error code=$errorCode msg=$errString pkg=$targetPkg")
+                        onResult(AUTH_ERROR)
+                    }
                 },
             )
     }
 
     override fun onStop() {
         super.onStop()
+        Log.d(TAG, "onStop replied=$replied pkg=$targetPkg")
+        // the system prompt steals focus and stops this activity, so only finish once there is a
+        // result, or the prompt dies before the user can answer
         if (replied) finish()
     }
 
@@ -127,6 +139,9 @@ class BiometricAuthActivity : Activity() {
     companion object {
         const val MODULE_PACKAGE = "eu.hxreborn.biometricapplock"
         const val AUTH_ACTIVITY = "$MODULE_PACKAGE.BiometricAuthActivity"
+
+        // opaque-window variant, launched when the solid unlock screen is enabled
+        const val OPAQUE_AUTH_ACTIVITY = "$MODULE_PACKAGE.OpaqueAuthActivity"
 
         const val EXTRA_TARGET_PKG = "$MODULE_PACKAGE.TARGET_PKG"
         const val EXTRA_AUTH_TOKEN = "$MODULE_PACKAGE.AUTH_TOKEN"

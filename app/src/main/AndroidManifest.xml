@@ -48,6 +48,14 @@
             android:taskAffinity=""
             android:theme="@style/Theme.BiometricAuth" />
 
+        <activity
+            android:name=".OpaqueAuthActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/Theme.BiometricAuth.Opaque" />
+
         <receiver
             android:name=".receiver.PackageReplacedReceiver"
             android:exported="false">

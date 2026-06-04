@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AppBlocking
+import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Fingerprint
@@ -269,7 +270,7 @@ fun SettingsScreen(
                     icon = Icons.Outlined.DeleteSweep,
                     title = stringResource(R.string.settings_relock_task_removed_title),
                     summary = stringResource(R.string.settings_relock_task_removed_summary),
-                    position = SectionPosition.Middle,
+                    position = SectionPosition.Bottom,
                     onClick = {
                         app.prefsRepository.save(
                             Prefs.RELOCK_ON_TASK_REMOVED,
@@ -281,12 +282,50 @@ fun SettingsScreen(
                     },
                 )
             }
+
+            item { SettingsSectionHeader(title = stringResource(R.string.settings_unlock_prompt)) }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.TouchApp,
+                    title = stringResource(R.string.settings_unlock_confirmation_title),
+                    summary = stringResource(R.string.settings_unlock_confirmation_summary),
+                    position = SectionPosition.Top,
+                    onClick = {
+                        app.prefsRepository.save(
+                            Prefs.UNLOCK_REQUIRE_CONFIRMATION,
+                            !prefs.unlockRequireConfirmation,
+                        )
+                    },
+                    trailing = {
+                        LockSwitch(checked = prefs.unlockRequireConfirmation, onCheckedChange = null)
+                    },
+                )
+            }
+            item {
+                PreferenceRow(
+                    icon = Icons.Outlined.Contrast,
+                    title = stringResource(R.string.settings_opaque_unlock_prompt_title),
+                    summary = stringResource(R.string.settings_opaque_unlock_prompt_summary),
+                    position = SectionPosition.Bottom,
+                    onClick = {
+                        app.prefsRepository.save(
+                            Prefs.USE_OPAQUE_UNLOCK_PROMPT,
+                            !prefs.useOpaqueUnlockPrompt,
+                        )
+                    },
+                    trailing = {
+                        LockSwitch(checked = prefs.useOpaqueUnlockPrompt, onCheckedChange = null)
+                    },
+                )
+            }
+
+            item { SettingsSectionHeader(title = stringResource(R.string.settings_protection)) }
             item {
                 PreferenceRow(
                     icon = Icons.Outlined.Screenshot,
                     title = stringResource(R.string.settings_block_screenshots_title),
                     summary = stringResource(R.string.settings_block_screenshots_summary),
-                    position = SectionPosition.Middle,
+                    position = SectionPosition.Top,
                     onClick = {
                         app.prefsRepository.save(
                             Prefs.BLOCK_SCREENSHOTS,
@@ -300,29 +339,10 @@ fun SettingsScreen(
             }
             item {
                 PreferenceRow(
-                    icon = Icons.Outlined.TouchApp,
-                    title = stringResource(R.string.settings_unlock_confirmation_title),
-                    summary = stringResource(R.string.settings_unlock_confirmation_summary),
-                    position = SectionPosition.Bottom,
-                    onClick = {
-                        app.prefsRepository.save(
-                            Prefs.UNLOCK_REQUIRE_CONFIRMATION,
-                            !prefs.unlockRequireConfirmation,
-                        )
-                    },
-                    trailing = {
-                        LockSwitch(checked = prefs.unlockRequireConfirmation, onCheckedChange = null)
-                    },
-                )
-            }
-
-            item { SettingsSectionHeader(title = stringResource(R.string.settings_protection)) }
-            item {
-                PreferenceRow(
                     icon = Icons.Outlined.AppBlocking,
                     title = stringResource(R.string.settings_prevent_uninstall_title),
                     summary = stringResource(R.string.settings_prevent_uninstall_summary),
-                    position = SectionPosition.Top,
+                    position = SectionPosition.Middle,
                     onClick = {
                         app.prefsRepository.save(
                             Prefs.PREVENT_MODULE_UNINSTALL,
