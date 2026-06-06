@@ -215,7 +215,7 @@ private fun XposedModule.hookRecentsLaunch(classLoader: ClassLoader) {
             val taskId = chain.args[2] as? Int
             val entry = taskId?.let { taskCache[it] }
 
-            entry?.let { relockOtherPackages(it.packageName, it.userId) }
+            relockOtherPackages(entry?.packageName, entry?.userId)
 
             if (entry != null && !isUnlocked(entry.packageName, entry.userId)) {
                 val opaque = shouldUseOpaqueUnlockPrompt()
@@ -276,7 +276,7 @@ private fun XposedModule.hookTaskRemoved(classLoader: ClassLoader) {
                 if (!shouldRelockOnTaskRemoved()) return@runCatching
                 val taskId = chain.args.getOrNull(0)?.let { taskIdField.getInt(it) }
                 val entry = taskId?.let { taskCache.remove(it) } ?: return@runCatching
-                removeFromUnlocked(setOf(entry.packageName))
+                removeFromUnlocked(setOf("${entry.packageName}:${entry.userId}"))
                 Logger.debug { "task removed relock pkg=${entry.packageName} taskId=$taskId" }
             }
             result

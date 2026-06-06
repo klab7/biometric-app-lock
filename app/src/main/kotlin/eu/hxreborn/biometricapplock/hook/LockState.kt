@@ -19,7 +19,7 @@ internal var lockedPackages: Set<String> = emptySet()
 
 private fun packageKey(
     pkg: String,
-    userId: Int,
+    userId: Int?,
 ): String = "$pkg:$userId"
 
 // pkg:userId -> elapsedRealtime of last interaction; entry exists iff the pkg is currently considered unlocked
@@ -93,7 +93,7 @@ internal fun clearRuntimeStateForPackage(
 
 internal fun relockOtherPackages(
     keepPkg: String?,
-    userId: Int,
+    userId: Int?,
 ) {
     if (keepPkg == BiometricAuthActivity.MODULE_PACKAGE) return
     val now = SystemClock.elapsedRealtime()
